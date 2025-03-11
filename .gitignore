@@ -1,0 +1,57 @@
+# Node.js (Frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# npm / yarn logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Spring Boot (Backend)
+backend/target/
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/.env
+backend/.idea/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# Java/Maven
+*.log
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes (optional, falls lokal Daten entstehen)
+mysql_data/
+*.pid
+
+# IDEs & Tools
+.idea/
+*.swp
+.vscode/
+*.bak
+*.tmp
+
+# Test coverage
+coverage/
+frontend/coverage/
+
+# Logs
+logs/
+*.log
+
+# Mac spezifisch
+._*
+
+# JetBrains Rider
+.idea/
