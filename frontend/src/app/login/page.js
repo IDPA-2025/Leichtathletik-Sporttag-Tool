@@ -9,14 +9,14 @@ export default function LoginPage() {
             <label className="block text-lg font-semibold text-gray-700">Benutzername</label>
             <input 
               type="text" 
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-blue-200 text-lg focus:ring-4 focus:ring-blue-500 focus:outline-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-lg text-gray-800 shadow-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
           </div>
           <div>
             <label className="block text-lg font-semibold text-gray-700">Passwort</label>
             <input 
               type="password" 
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-blue-200 text-lg focus:ring-4 focus:ring-blue-500 focus:outline-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-lg text-gray-800 shadow-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
           </div>
           <button 
