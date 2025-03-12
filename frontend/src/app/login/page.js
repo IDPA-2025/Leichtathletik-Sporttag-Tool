@@ -1,29 +1,39 @@
-export default function LoginPage() {
+"use client";
+import { useState } from "react";
+
+export default function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
   return (
-    <div className="flex items-center justify-center h-screen bg-blue-500">
-      <div className="bg-blue-100 p-10 rounded-xl shadow-2xl w-96">
-        <h1 className="text-4xl font-bold text-center text-gray-800">Leichtathletik Sporttag</h1>
-        <p className="text-xl text-gray-600 text-center mt-4">Login</p>
-        <form className="mt-8 space-y-6">
-          <div>
-            <label className="block text-lg font-semibold text-gray-700">Benutzername</label>
-            <input 
-              type="text" 
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-lg text-gray-800 shadow-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-lg font-semibold text-gray-700">Passwort</label>
-            <input 
-              type="password" 
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-lg text-gray-800 shadow-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
-            />
-          </div>
-          <button 
-            className="w-full bg-blue-600 text-white py-3 rounded-lg text-lg font-bold hover:bg-blue-700 transition">
+    <div className="bg-zurich flex justify-center items-center h-screen">
+      <div className="bg-white/50 backdrop-blur-sm shadow-lg rounded-lg p-8 w-[85vw] h-[80vh] text-center flex flex-col justify-center">
+        <h1 className="text-5xl font-light text-gray-900 mb-4">
+          Leichtathletik Sporttag
+        </h1>
+        <p className="text-2xl text-gray-700 mb-6">Login</p>
+
+        <div className="flex flex-col space-y-4 items-center">
+          <label className="text-lg font-semibold text-gray-900">Benutzername</label>
+          <input
+            type="text"
+            className="bg-white/60 text-gray-900 p-3 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+
+          <label className="text-lg font-semibold text-gray-900">Passwort</label>
+          <input
+            type="password"
+            className="bg-white/60 text-gray-900 p-3 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all">
             LOGIN
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

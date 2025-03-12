@@ -1,40 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700&display=swap');
 
-/* Nun erst andere globale Variablen */
+
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --font-raleway: 'Raleway', sans-serif;
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@layer utilities {
+  .bg-zurich {
+    background: linear-gradient(45deg, #2587C6 50%, #ffffff 50%);
+    background-size: cover;
+    background-position: center;
+    min-height: 100vh;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {
-  font-family: var(--font-raleway);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  margin: 0;
-}
-
-.bg-blue-pattern {
-  background: linear-gradient(45deg, #3b82f6 50%, #ffffff 50%);
-  min-height: 100vh;
-  width: 100vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.content-container {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  width: 80%;
-  max-width: 90%;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: auto;
-  min-height: 75%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Raleway', sans-serif;
 }
