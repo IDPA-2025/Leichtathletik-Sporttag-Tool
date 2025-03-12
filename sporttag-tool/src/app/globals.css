@@ -13,11 +13,27 @@
 }
 
 @layer utilities {
-  .bg-zurich {
+  .wrapper-container {
     background: linear-gradient(45deg, #2587C6 50%, #ffffff 50%);
     background-size: cover;
     background-position: center;
     min-height: 100vh;
+  }
+
+  .transparent-container {
+    @apply bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[90dvw] h-[90dvh] flex flex-col justify-center items-center
+  }
+
+  .wrapper-container{
+    @apply flex justify-center items-center h-screen
+  }
+
+  .big-title{
+    @apply text-5xl font-extralight text-gray-900 mb-12 tracking-wide
+  }
+
+  .mid-title{
+    @apply text-4xl font-light text-gray-900 mb-6
   }
 }
 
@@ -40,3 +56,4 @@ body {
   color: var(--foreground);
   font-family: 'Raleway', sans-serif;
 }
+

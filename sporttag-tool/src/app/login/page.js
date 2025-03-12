@@ -6,8 +6,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
 
   return (
-    <div className="bg-zurich flex justify-center items-center h-screen">
-      <div className="bg-white/50 backdrop-blur-sm shadow-lg rounded-lg p-8 w-[85vw] h-[80vh] text-center flex flex-col justify-center">
+    <div className="wrapper-container">
+      <div className="transparent-container">
         <h1 className="text-5xl font-light text-gray-900 mb-4">
           Leichtathletik Sporttag
         </h1>

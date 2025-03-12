@@ -19,9 +19,9 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="bg-zurich flex justify-center items-center h-screen">
-      <div className="bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[85vw] h-[75vh] flex flex-col justify-center items-center">
-        <h1 className="text-4xl font-light text-gray-900 mb-6">Klassenliste hochladen</h1>
+    <div className="wrapper-container">
+      <div className="transparent-container">
+        <h2 className="mid-title">Klassenliste hochladen</h2>
 
         {/* Upload-Bereich */}
         <div className="border-2 border-dashed border-blue-500 w-full max-w-2xl h-32 flex flex-col items-center justify-center rounded-lg p-4 mb-6">
