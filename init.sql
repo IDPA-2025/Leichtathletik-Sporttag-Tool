@@ -59,3 +59,12 @@ VALUES
   (UUID(), 'SPRINT_80M'),
   (UUID(), 'SHOT_PUT'),
   (UUID(), 'HURDLES');
+
+-- Lehrer-Account (username: lehrer / password: lehrerpass)
+INSERT INTO users (id, username, password, role)
+VALUES (
+  UUID(), 
+  'lehrer', 
+  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZagcsdOQ5XkMKPydA3.sEknW7ZcyG', 
+  'LEHRER'
+);
