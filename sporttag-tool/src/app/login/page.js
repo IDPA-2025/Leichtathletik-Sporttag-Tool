@@ -106,10 +106,10 @@ export default function Login() {
   return (
       <div className="wrapper-container">
         <div className="transparent-container">
-          <h1 className="text-5xl font-light text-gray-900 mb-4">
+          <h1 className="text-5xl font-light text-gray-900 mb-10">
             Leichtathletik Sporttag
           </h1>
-          <p className="text-2xl text-gray-700 mb-6">Login</p>
+          <p className="text-4xl text-gray-700 mb-6">Login</p>
 
           <form onSubmit={handleLogin} className="flex flex-col space-y-4 items-center">
             <label className="text-lg font-semibold text-gray-900">
