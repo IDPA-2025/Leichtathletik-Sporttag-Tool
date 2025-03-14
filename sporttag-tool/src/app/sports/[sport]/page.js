@@ -17,7 +17,7 @@ export default function GroupOverview() {
                 return
             }
 
-            // Alle Gruppen generieren: "3a-weiblich", "2b-männlich", ...
+            // Alle Gruppen generieren: "3a-weiblich", "2b-männlich"
             const groupSet = new Set()
             data.forEach(student => {
                 const groupName = `${student.klasse}-${student.geschlecht.toLowerCase()}`
@@ -31,20 +31,28 @@ export default function GroupOverview() {
     }, [])
 
     return (
-        <div className="wrapper-container h-screen">
-            <div className="transparent-container h-full">
-                <div className="h-1/5 bg-cyan-300 w-full flex items-center justify-center">
-                    <h1 className="text-2xl font-bold">Gruppen für {sport}</h1>
+        <div className="wrapper-container h-screen flex flex-col">
+            <div className="transparent-container flex flex-col items-center w-full">
+
+                {/* Gruppen Auswahl Titel */}
+                <div className="w-full py-6 flex items-center justify-center rounded-t-lg bg-cyan-300">
+                    <h1 className="text-4xl font-light text-gray-900">Gruppen für {sport}</h1>
                 </div>
-                <div className="flex h-4/5 bg-amber-600 w-full justify-center items-center flex-wrap gap-5 p-4">
-                    {groups.map((group) => (
-                        <Link key={group} href={`/sports/${sport}/${group}`}>
-                            <div className="bg-blue-800 rounded-lg w-[min(25vw,100px)] md:w-[30%] lg:w-[20%] aspect-square flex items-center justify-center text-white font-semibold hover:bg-blue-600 transition">
-                                {group}
-                            </div>
-                        </Link>
-                    ))}
+
+                {/* Responsive Grid für Gruppen */}
+                <div className="w-full flex-1 flex justify-center items-center p-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
+                        {groups.map((group) => (
+                            <Link key={group} href={`/sports/${sport}/${group}`}>
+                                <div className="aspect-square border-2 border-green-500 rounded-lg hover:bg-blue-50 transition flex flex-col items-center justify-center p-4">
+                                    {/* Gruppenname */}
+                                    <p className="text-gray-700 text-xl md:text-2xl font-semibold text-center">{group}</p>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
+
             </div>
         </div>
     )

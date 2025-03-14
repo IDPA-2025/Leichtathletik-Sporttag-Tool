@@ -21,12 +21,15 @@
   }
 
   .transparent-container {
-    @apply bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[90dvw] h-[90dvh] flex flex-col justify-center items-center
+    @apply bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[90dvw]
+    flex flex-col justify-center items-center min-h-[90dvh] sm:h-auto;
   }
 
-  .wrapper-container{
-    @apply flex justify-center items-center h-screen
+
+  .wrapper-container {
+    @apply flex justify-center items-center h-auto min-h-screen; /* Standard: Höhe flexibel */
   }
+
 
   .big-title{
     @apply text-5xl font-extralight text-gray-900 mb-12 tracking-wide
