@@ -72,7 +72,7 @@ export default function UploadPage() {
 
   return (
       <div className="wrapper-container">
-        <div className="transparent-container">
+        <div className="transparent-container text-center flex justify-center items-center">
           <h2 className="mid-title">Klassenliste hochladen</h2>
 
           {/* Upload-Bereich bleibt genau gleich! */}
@@ -86,7 +86,7 @@ export default function UploadPage() {
           </div>
 
           {/* Schülerliste */}
-          <div className="w-full bg-white shadow-md rounded-lg p-4 max-h-[500px] overflow-y-auto">
+          <div className="w-1/2 bg-white shadow-md rounded-lg p-4 max-h-[500px] overflow-y-auto">
 
             {/* Desktop-Tabelle */}
             <table className="hidden md:table w-full text-center border-collapse">
@@ -114,9 +114,9 @@ export default function UploadPage() {
                         Helfer
                       </button>
                     </td>
-                    <td className="p-2">
+                    <td className="p-2 flex justify-center">
                       <button
-                          className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
+                          className={`absent-button ${absentees.includes(index) ? "active" : "inactive"} `}
                           onClick={() => toggleAbsentee(index)}
                       />
                     </td>

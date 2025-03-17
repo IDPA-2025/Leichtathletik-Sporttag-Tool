@@ -5,7 +5,7 @@ import { Upload, PieChart } from "lucide-react"; // Icons für Buttons
 export default function Menu() {
   return (
     <div className="wrapper-container">
-      <div className="transparent-container text-center">
+      <div className="transparent-container text-center flex justify-center items-center">
         <h1 className="big-title">
           Leichtathletik Sporttag
         </h1>
