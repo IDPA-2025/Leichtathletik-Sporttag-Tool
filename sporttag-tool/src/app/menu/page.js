@@ -5,12 +5,12 @@ import { Upload, PieChart } from "lucide-react"; // Icons für Buttons
 export default function Menu() {
   return (
     <div className="wrapper-container">
-      <div className="transparent-container">
+      <div className="transparent-container text-center">
         <h1 className="big-title">
           Leichtathletik Sporttag
         </h1>
 
-        <div className="flex space-x-16 mt-2">
+        <div className="flex gap-8 md:flex-row flex-col mt-2">
           {/* Klassenliste hochladen */}
           <Link href="/upload">
             <div className="w-52 h-52 border-2 border-blue-500 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 transition">

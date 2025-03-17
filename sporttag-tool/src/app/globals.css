@@ -22,8 +22,10 @@
 
   .transparent-container {
     @apply bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[90dvw]
-    flex flex-col justify-center items-center min-h-[90dvh] sm:h-auto;
+    flex flex-col justify-center items-center min-h-[90dvh] sm:h-auto box-border;
   }
+
+
 
 
   .wrapper-container {
@@ -38,6 +40,57 @@
   .mid-title{
     @apply text-4xl font-light text-gray-900 mb-6
   }
+  /* Helfer-Button */
+  .helper-button {
+    @apply flex items-center justify-center px-4 py-1 rounded-lg border-2 border-yellow-400
+    text-black text-lg font-medium transition-all shadow-sm w-[100px];
+  }
+
+  /* Aktiv = Gelber Hintergrund */
+  .helper-button.active {
+    @apply bg-yellow-300 border-yellow-500;
+  }
+
+  /* Inaktiv = Transparente Umrandung */
+  .helper-button.inactive {
+    @apply bg-transparent;
+  }
+
+  /* Durchgestrichen, wenn Schüler abwesend */
+  .helper-button.absent {
+    @apply text-gray-500 line-through border-gray-400 bg-gray-200 cursor-not-allowed;
+  }
+
+  /* Abwesenheits-Button */
+  .absent-button {
+    @apply flex items-center justify-center w-8 h-8 rounded-lg border-2 border-red-400 transition-all shadow-sm;
+  }
+
+  /* Aktiv = Roter Hintergrund */
+  .absent-button.active {
+    @apply bg-red-500 border-red-600 text-white;
+  }
+
+  /* Inaktiv = Transparente Umrandung */
+  .absent-button.inactive {
+    @apply bg-transparent;
+  }
+
+  /* Tabellenzeile */
+  .student-row {
+    @apply flex justify-between items-center p-2 border-b border-gray-300;
+  }
+
+  /* Schüler-Name */
+  .student-name {
+    @apply text-black text-lg;
+  }
+
+  /* Wenn Schüler abwesend ist */
+  .student-name.absent {
+    @apply text-gray-500 line-through;
+  }
+
 }
 
 @theme inline {

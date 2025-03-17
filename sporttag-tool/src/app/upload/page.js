@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Upload, X } from "lucide-react";
-import { useEffect } from "react";
+import { Upload } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient("https://your-supabase-url.supabase.co", "your-anon-key");
@@ -19,7 +18,7 @@ export default function UploadPage() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      const lines = text.split("\n").slice(1); // Entfernt die Kopfzeile
+      const lines = text.split("\n").slice(1); // Kopfzeile entfernen
       const parsedStudents = lines.map((line) => {
         const [nachname, vorname, anrede, klasse] = line.split(",");
         return {
@@ -35,15 +34,22 @@ export default function UploadPage() {
   };
 
   const toggleHelper = (index) => {
-    setHelpers((prev) =>
-        prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
+    if (!absentees.includes(index)) {
+      setHelpers((prev) =>
+          prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+      );
+    }
   };
 
   const toggleAbsentee = (index) => {
     setAbsentees((prev) =>
         prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
+
+    // Falls als "Abwesend" markiert, entferne Helfer-Status
+    if (!absentees.includes(index)) {
+      setHelpers(prev => prev.filter(i => i !== index));
+    }
   };
 
   const handleSubmit = async () => {
@@ -69,7 +75,7 @@ export default function UploadPage() {
         <div className="transparent-container">
           <h2 className="mid-title">Klassenliste hochladen</h2>
 
-          {/* Upload-Bereich */}
+          {/* Upload-Bereich bleibt genau gleich! */}
           <div className="border-2 border-dashed border-blue-500 w-full max-w-2xl h-32 flex flex-col items-center justify-center rounded-lg p-4 mb-6">
             <Upload size={32} className="text-blue-600" />
             <p className="text-gray-700 text-sm">Drag & Drop Klassenliste hier</p>
@@ -80,8 +86,10 @@ export default function UploadPage() {
           </div>
 
           {/* Schülerliste */}
-          <div className="w-full max-w-2xl bg-white shadow-md rounded-lg p-4 max-h-96 overflow-y-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="w-full bg-white shadow-md rounded-lg p-4 max-h-[500px] overflow-y-auto">
+
+            {/* Desktop-Tabelle */}
+            <table className="hidden md:table w-full text-center border-collapse">
               <thead>
               <tr className="border-b border-gray-300">
                 <th className="p-2 text-gray-700">Name</th>
@@ -97,22 +105,63 @@ export default function UploadPage() {
                     <td className="p-2">{`${student.nachname}, ${student.vorname}`}</td>
                     <td className="p-2">{student.geschlecht}</td>
                     <td className="p-2">{student.klasse}</td>
-                    <td className="p-2 text-center">
-                      <input type="checkbox" onChange={() => toggleHelper(index)} checked={helpers.includes(index)} />
+                    <td className="p-2">
+                      <button
+                          className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`}
+                          onClick={() => toggleHelper(index)}
+                          disabled={absentees.includes(index)}
+                      >
+                        Helfer
+                      </button>
                     </td>
-                    <td className="p-2 text-center">
-                      <input type="checkbox" onChange={() => toggleAbsentee(index)} checked={absentees.includes(index)} />
+                    <td className="p-2">
+                      <button
+                          className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
+                          onClick={() => toggleAbsentee(index)}
+                      />
                     </td>
                   </tr>
               ))}
               </tbody>
             </table>
+
+            {/* Mobile-Ansicht */}
+            <div className="md:hidden flex flex-col gap-4">
+              {students.map((student, index) => (
+                  <div key={index} className="border border-gray-300 rounded-lg p-3 shadow-sm">
+                    <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>
+                      {student.vorname} {student.nachname}
+                    </p>
+                    <p className="text-gray-600">Klasse: {student.klasse} | Geschlecht: {student.geschlecht}</p>
+
+                    {/* Buttons */}
+                    <div className="flex justify-between mt-2">
+                      <button
+                          className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`}
+                          onClick={() => toggleHelper(index)}
+                          disabled={absentees.includes(index)}
+                      >
+                        Helfer
+                      </button>
+                      <button
+                          className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
+                          onClick={() => toggleAbsentee(index)}
+                      />
+                    </div>
+                  </div>
+              ))}
+            </div>
+
           </div>
 
-          {/* Absenden-Button */}
-          <button onClick={handleSubmit} className="mt-4 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-            Absenden
+          {/* Speicher-Button */}
+          <button
+              onClick={handleSubmit}
+              className="mt-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600 transition-all"
+          >
+            Speichern
           </button>
+
         </div>
       </div>
   );
