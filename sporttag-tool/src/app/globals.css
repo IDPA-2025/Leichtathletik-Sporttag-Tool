@@ -30,7 +30,7 @@
 
 
   .wrapper-container {
-    @apply flex justify-center items-center h-auto min-h-screen text-center; /* Standard: Höhe flexibel */
+    @apply flex justify-center items-center text-center; /* Standard: Höhe flexibel */
   }
 
 

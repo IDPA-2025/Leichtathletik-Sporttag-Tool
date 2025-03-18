@@ -24,7 +24,7 @@ export default function UploadPage() {
         return {
           nachname: nachname.trim(),
           vorname: vorname.trim(),
-          geschlecht: anrede.trim() === "Herr" ? "weiblich" : "mänlich",
+          geschlecht: anrede.trim() === "Herr" ? "männlich" : "weiblich",
           klasse: klasse.trim(),
         };
       }).filter(student => student.nachname);
