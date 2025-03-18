@@ -16,6 +16,7 @@ export default function GroupResults() {
     const getUnit = () => {
         const sportUnits = {
             sprint: "sekunden",
+            "80m": "sekunden",
             hochsprung: "meter",
             weitsprung: "meter",
             kugelstossen: "meter",

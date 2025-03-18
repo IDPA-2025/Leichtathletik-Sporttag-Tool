@@ -12,7 +12,6 @@ export default function BackButton() {
             onClick={() => router.back()}
         >
             <ArrowLeft size={20} />
-            Zurück
         </button>
     );
 }
