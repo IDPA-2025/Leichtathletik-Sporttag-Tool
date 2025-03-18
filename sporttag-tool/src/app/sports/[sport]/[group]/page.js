@@ -15,12 +15,12 @@ export default function GroupResults() {
     // Funktion zur Bestimmung der Einheit basierend auf der Sportart
     const getUnit = () => {
         const sportUnits = {
-            sprint: "s",
-            hochsprung: "m",
-            weitsprung: "m",
-            kugelstossen: "m",
-            speerwurf: "m",
-            huerdenlauf: "s",
+            sprint: "sekunden",
+            hochsprung: "meter",
+            weitsprung: "meter",
+            kugelstossen: "meter",
+            speerwurf: "meter",
+            huerdenlauf: "sekunden",
             punkte: "Punkte",
         };
         return sportUnits[sport.toLowerCase()] || "";
@@ -80,7 +80,7 @@ export default function GroupResults() {
             <div className="transparent-container flex flex-col h-[90dvh]">
 
                 {/* Titel-Bereich */}
-                <section className="h-1/5 flex items-center justify-center w-full">
+                <section className="h-1/5 flex items-center justify-center w-full mb-10">
                     <h1 className="text-3xl font-light text-gray-900 text-center">
                         Ergebnisse für {sport} ({group})
                     </h1>

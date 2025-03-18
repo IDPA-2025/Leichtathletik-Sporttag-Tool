@@ -35,7 +35,7 @@ export default function GroupOverview() {
             <div className="transparent-container flex flex-col items-center w-full">
 
                 {/* Gruppen Auswahl Titel */}
-                <div className="w-full py-6 flex items-center justify-center rounded-t-lg bg-cyan-300">
+                <div className="w-full py-6 flex items-center justify-center rounded-t-lg">
                     <h1 className="text-4xl font-light text-gray-900">Gruppen für {sport}</h1>
                 </div>
 
