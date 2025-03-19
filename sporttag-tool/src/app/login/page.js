@@ -152,13 +152,7 @@ export default function Login() {
                 {isLoading ? "WIRD GELADEN..." : "LOGIN"}
               </button>
 
-              <button
-                  type="button"
-                  onClick={generateHash}
-                  className="text-sm text-gray-500 hover:text-gray-700 mt-4"
-              >
-                Generate Test Password Hash
-              </button>
+
             </form>
           </section>
 

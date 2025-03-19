@@ -191,7 +191,7 @@ export default function UploadPage() {
           </div>
 
           {/* Dropdown zum Löschen einer Klasse */}
-          <div className="w-full max-w-2xl flex flex-col items-center">
+          <div className="w-full max-w-2xl flex flex-col items-center mb-2">
             <label className="text-lg font-semibold text-gray-900 mb-2">Klasse löschen:</label>
             <select
                 value={selectedClass}
