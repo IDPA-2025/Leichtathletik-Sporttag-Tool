@@ -1,107 +1,45 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "../lib/supabaseClient"
-
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [statusMessage, setStatusMessage] = useState("")
-
-  const router = useRouter()
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async (e) => {
-    e?.preventDefault()
-    setError(null)
-    setStatusMessage("")
-    setIsLoading(true)
-
-    if (!username || !password) {
-      setError("Bitte geben Sie einen Benutzernamen und ein Passwort ein.")
-      setIsLoading(false)
-      return
-    }
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
     try {
-      // First try with 'username' column
-      let { data: user, error: userError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('username', username)
-          .limit(1)
-          .single()
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+        credentials: "include" // Cookies mit der Anfrage senden
+      });
 
-      // If no user found with 'username', try 'benutzername'
-      if (userError && userError.code === 'PGRST116') {
-        const { data: userAlt, error: userAltError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('username', username)
-            .limit(1)
-            .single()
+      const data = await response.json();
 
-        if (!userAltError) {
-          user = userAlt
-        } else if (userAltError.code === 'PGRST116') {
-          setError("Benutzername nicht gefunden.")
-          setIsLoading(false)
-          return
-        } else {
-          throw userAltError
-        }
-      } else if (userError) {
-        throw userError
+      if (!response.ok) {
+        setError(data.error || "Unbekannter Fehler");
+        setIsLoading(false);
+        return;
       }
 
-      // User found - now verify password
-      // In a real app, this would be done server-side
-      const passwordField = user.passwort || user.password || user.passwordHash
-
-      if (!passwordField) {
-        throw new Error("Password field not found in user record")
-      }
-
-      // Import bcrypt dynamically to avoid server-side issues
-      const bcryptjs = await import('bcryptjs')
-
-      // Compare passwords
-      const isPasswordValid = await bcryptjs.compare(password, passwordField)
-
-      if (!isPasswordValid) {
-        setError("Falsches Passwort.")
-        setIsLoading(false)
-        return
-      }
-
-      // Success! Redirect to menu
-      setStatusMessage("Login erfolgreich! Weiterleitung...")
-      router.push("/menu")
-
+      console.log("✅ Login erfolgreich! Weiterleitung...");
+      router.replace("/menu");
     } catch (error) {
-      console.error("Login error:", error)
-      setError("Ein Fehler ist aufgetreten: " + (error.message || "Unbekannter Fehler"))
+      console.error("Login error:", error);
+      setError("Ein Fehler ist aufgetreten.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
-
-  // For demonstration - generate a hash for a test password
-  const generateHash = async () => {
-    try {
-      const bcryptjs = await import('bcryptjs')
-      const salt = await bcryptjs.genSalt(10)
-      const testPassword = "helferpass" // Example password
-      const hash = await bcryptjs.hash(testPassword, salt)
-      setStatusMessage(`Test password hash (for "password123"): ${hash}`)
-    } catch (error) {
-      console.error("Hash generation error:", error)
-      setStatusMessage("Fehler bei der Hash-Generierung: " + error.message)
-    }
-  }
+  };
 
   return (
       <div className="wrapper-container">
@@ -113,7 +51,7 @@ export default function Login() {
             <p className="text-4xl text-gray-700 mb-6">Login</p>
           </section>
 
-          <section className="  ">
+          <section>
             <form onSubmit={handleLogin} className="flex flex-col space-y-4 items-center">
               <label className="text-lg font-semibold text-gray-900">
                 Benutzername
@@ -140,7 +78,6 @@ export default function Login() {
               />
 
               {error && <p className="text-red-600 mt-2">{error}</p>}
-              {statusMessage && <p className="text-green-600 mt-2 text-sm">{statusMessage}</p>}
 
               <button
                   type="submit"
@@ -151,12 +88,9 @@ export default function Login() {
               >
                 {isLoading ? "WIRD GELADEN..." : "LOGIN"}
               </button>
-
-
             </form>
           </section>
-
         </div>
       </div>
-  )
+  );
 }
