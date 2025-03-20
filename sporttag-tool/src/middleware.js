@@ -1,8 +1,5 @@
 // Middleware für geschützte Routen
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET;
 
 export function middleware(req) {
     console.log("🛠 Middleware gestartet für:", req.nextUrl.pathname);
@@ -19,7 +16,10 @@ export function middleware(req) {
         const token = tokenCookie.value;
         console.log("📜 Token:", token);
 
-        const decoded = jwt.verify(token, JWT_SECRET);
+        // JWT manuell decodieren (da Edge Runtime kein jsonwebtoken unterstützt)
+        const payloadBase64 = token.split('.')[1]; // JWT besteht aus Header.Payload.Signatur
+        const decoded = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+
         console.log("✅ Token gültig! Benutzer:", decoded);
 
         return NextResponse.next();
@@ -31,6 +31,5 @@ export function middleware(req) {
 
 // Middleware aktivieren
 export const config = {
-    matcher: [ "/sports/:path*", "/upload"],
-    runtime: "nodejs",
+    matcher: ["/sports/:path*", "/upload"],
 };

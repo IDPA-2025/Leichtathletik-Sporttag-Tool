@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabaseClient';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
-import { supabase} from "../../lib/supabaseClient";
 
 export async function POST(req) {
     try {
@@ -45,8 +44,7 @@ export async function POST(req) {
             sameSite: "Strict",
             path: "/",
             maxAge: 3600 // 1 Stunde
-        }
-        );
+        });
 
         const response = NextResponse.json({ success: true, role: user.role });
         response.headers.set('Set-Cookie', cookie);
