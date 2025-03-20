@@ -32,24 +32,25 @@ export async function POST(req) {
 
         // JWT-Token generieren
         const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
+            { id: user.id, username: user.username, role: user.role }, // **Rolle wird im Token gespeichert**
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
 
-        // Cookie setzen
+        // Cookie setzen (HttpOnly, für Server-Authentifizierung)
         const cookie = serialize('authToken', token, {
-            httpOnly: true,
+            httpOnly: true, // HttpOnly für Middleware-Sicherheit
             secure: process.env.NODE_ENV === "production",
             sameSite: "Strict",
             path: "/",
             maxAge: 3600 // 1 Stunde
         });
 
-        const response = NextResponse.json({ success: true, role: user.role });
+        // Antwort mit Set-Cookie Header
+        const response = NextResponse.json({ success: true, role: user.role, token });
         response.headers.set('Set-Cookie', cookie);
-        console.log("✅ Login erfolgreich! Cookie:", cookie );
 
+        console.log("✅ Login erfolgreich! Cookie:", cookie);
         return response;
 
     } catch (err) {

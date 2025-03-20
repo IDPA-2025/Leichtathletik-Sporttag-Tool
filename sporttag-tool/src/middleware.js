@@ -1,4 +1,3 @@
-// Middleware für geschützte Routen
 import { NextResponse } from 'next/server';
 
 export function middleware(req) {
@@ -16,11 +15,19 @@ export function middleware(req) {
         const token = tokenCookie.value;
         console.log("📜 Token:", token);
 
-        // JWT manuell decodieren (da Edge Runtime kein jsonwebtoken unterstützt)
+        // JWT manuell decodieren (Edge Runtime kompatibel)
         const payloadBase64 = token.split('.')[1]; // JWT besteht aus Header.Payload.Signatur
         const decoded = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
 
         console.log("✅ Token gültig! Benutzer:", decoded);
+
+        // **Wenn Helfer auf /upload zugreifen will → Kein Redirect, aber Header setzen**
+        if (req.nextUrl.pathname.startsWith("/upload") && decoded.role !== "lehrer") {
+            console.log("⚠️ Helfer versucht auf /upload zuzugreifen → Alert auslösen im Frontend!");
+            const response = NextResponse.next();
+            response.headers.set("X-Access-Denied", "true"); // Custom Header setzen
+            return response;
+        }
 
         return NextResponse.next();
     } catch (error) {
@@ -31,5 +38,5 @@ export function middleware(req) {
 
 // Middleware aktivieren
 export const config = {
-    matcher: ["/sports/:path*", "/upload"],
+    matcher: ["/menu","/sports/:path*", "/upload"], // Middleware für diese Routen aktivieren
 };

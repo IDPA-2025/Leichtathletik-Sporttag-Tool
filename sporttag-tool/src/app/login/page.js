@@ -20,7 +20,7 @@ export default function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include" // Cookies mit der Anfrage senden
+        credentials: "include", // Cookies mit der Anfrage senden
       });
 
       const data = await response.json();
@@ -30,6 +30,9 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
+
+      // Speichert das Token im localStorage für das Menü
+      localStorage.setItem("authToken", data.token);
 
       console.log("✅ Login erfolgreich! Weiterleitung...");
       router.replace("/menu");
