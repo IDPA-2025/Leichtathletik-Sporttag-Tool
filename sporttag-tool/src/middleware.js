@@ -21,9 +21,14 @@ export function middleware(req) {
 
         console.log("✅ Token gültig! Benutzer:", decoded);
 
+        if (req.nextUrl.pathname.startsWith("/upload") && decoded.role !== "lehrer") {
+            return NextResponse.redirect(new URL("/menu", req.url));
+        }
+
         // **Wenn Helfer auf /upload zugreifen will → Kein Redirect, aber Header setzen**
         if (req.nextUrl.pathname.startsWith("/upload") && decoded.role !== "lehrer") {
             console.log("⚠️ Helfer versucht auf /upload zuzugreifen → Alert auslösen im Frontend!");
+
             const response = NextResponse.next();
             response.headers.set("X-Access-Denied", "true"); // Custom Header setzen
             return response;
