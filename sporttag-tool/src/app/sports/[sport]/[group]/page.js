@@ -17,6 +17,8 @@ export default function GroupResults() {
     const [showScale, setShowScale] = useState(false);
     const [pointsData, setPointsData] = useState([]);
     const [sportName, setSportName] = useState("");
+    const [showExport, setShowExport] = useState(false);
+
 
 
     const getSportConfig = () => {
@@ -200,19 +202,40 @@ export default function GroupResults() {
         setSaveMessage("");
 
         try {
+            const zeitDisziplinen = ["80m", "huerdenlauf"];
+
             for (const student of students) {
                 const bestResult = getBestResult(student.id);
                 const geschlecht = group.split("-")[1];
                 const sportCode = sport;
 
-                const { data: pointData } = await supabase
-                    .from("points_table")
-                    .select("punkte")
-                    .eq("geschlecht", geschlecht)
-                    .eq("sport_code", sportCode)
-                    .lte("leistung", bestResult)
-                    .order("punkte", { ascending: false })
-                    .limit(1);
+                const istZeitDisziplin = zeitDisziplinen.includes(sportCode.toLowerCase());
+
+                let pointData;
+
+                // Zeitdisziplin: kleinere Zeit besser (z.B. 12.34s)
+                if (istZeitDisziplin) {
+                    const response = await supabase
+                        .from("points_table")
+                        .select("punkte")
+                        .eq("geschlecht", geschlecht)
+                        .eq("sport_code", sportCode)
+                        .gte("leistung", bestResult) // 👈 langsamer oder gleich
+                        .order("leistung", { ascending: true }) // nächstgrößerer Zeitwert zuerst
+                        .limit(1);
+                    pointData = response.data;
+                } else {
+                    // Wurf/Sprung: größere Leistung besser (z.B. 6.20m)
+                    const response = await supabase
+                        .from("points_table")
+                        .select("punkte")
+                        .eq("geschlecht", geschlecht)
+                        .eq("sport_code", sportCode)
+                        .gte("leistung", bestResult)
+                        .order("leistung", { ascending: true }) // niedrigste Leistung ≥ best_result
+                        .limit(1);
+                    pointData = response.data;
+                }
 
                 const punkte = pointData && pointData.length > 0 ? pointData[0].punkte : null;
 
@@ -227,6 +250,7 @@ export default function GroupResults() {
                     points: punkte,
                 };
 
+                // Insert oder Update
                 const { data: existingData } = await supabase
                     .from("results")
                     .select("*")

@@ -32,6 +32,18 @@ export default function UploadPage() {
     fetchClasses();
   }, []);
 
+  function berechneAlterskategorie(geburtsdatum) {
+    const veranstaltungsDatum = new Date("2025-06-01");
+    const geburtsdatumDate = new Date(geburtsdatum);
+    const diffInJahren = veranstaltungsDatum.getFullYear() - geburtsdatumDate.getFullYear();
+    const adjust = veranstaltungsDatum < new Date(geburtsdatumDate.setFullYear(veranstaltungsDatum.getFullYear()));
+    const alter = adjust ? diffInJahren - 1 : diffInJahren;
+
+    if (alter < 16) return "-15";
+    if (alter >= 16 && alter <= 17) return "16-17";
+    return "18+";
+  }
+
   const detectSeparator = (text) => {
     if (text.includes(";")) return ";";
     return ",";
@@ -62,18 +74,19 @@ export default function UploadPage() {
 
       const parsedStudents = lines.slice(1).map((line) => {
         const values = line.split(separator).map(v => v.trim());
+        const geburtsdatum = convertDate(values[geburtsdatumIndex]);
         return {
           nachname: values[nachnameIndex] || "",
           vorname: values[vornameIndex] || "",
-          geburtsdatum: convertDate(values[geburtsdatumIndex]),
+          geburtsdatum,
           geschlecht: values[anredeIndex] === "Herr" ? "maennlich" : "weiblich",
           klasse: values[klasseIndex] || "",
           helfer: false,
           anwesend: true,
+          age_category: berechneAlterskategorie(geburtsdatum),
         };
       }).filter(student => student.nachname && student.vorname && student.klasse);
 
-      // Verhindere Upload, wenn Klasse schon existiert
       const uploadedClasses = [...new Set(parsedStudents.map(s => s.klasse))];
       const existing = uploadedClasses.filter(cls => classes.includes(cls));
 
@@ -105,7 +118,6 @@ export default function UploadPage() {
 
     setLoading(true);
 
-    // Helfer/Abwesend einbauen
     const updatedStudents = students.map((student, index) => ({
       ...student,
       helfer: helpers.includes(index),
@@ -114,7 +126,7 @@ export default function UploadPage() {
 
     const { error } = await supabase
         .from("students")
-        .upsert(updatedStudents, { onConflict: ["id"] }); // oder ["nachname", "vorname", "klasse"]
+        .upsert(updatedStudents, { onConflict: ["id"] });
 
     setLoading(false);
 
@@ -123,7 +135,7 @@ export default function UploadPage() {
       alert(`Fehler beim Hochladen: ${error.message}`);
     } else {
       alert("Erfolgreich gespeichert!");
-      location.reload(); // Seite neu laden
+      location.reload();
     }
   };
 
