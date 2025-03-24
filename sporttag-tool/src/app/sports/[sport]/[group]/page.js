@@ -19,9 +19,9 @@ export default function GroupResults() {
         const sportConfigs = {
             "80m": { unit: "sek", attempts: 1 },
             "huerdenlauf": { unit: "sek", attempts: 1 },
-            "kugelstossen": { unit: "m", attempts: 3 },
-            "hochsprung": { unit: "m", attempts: 6, trackHeight: true },
-            "speerwurf": { unit: "m", attempts: 3, trackHeight: true },
+            "kugel": { unit: "meter", attempts: 3 },
+            "hoch": { unit: "m", attempts: 6, trackHeight: true },
+            "speer": { unit: "meter", attempts: 3 },
         };
         return sportConfigs[sport.toLowerCase()] || { unit: "", attempts: 3 };
     };
@@ -132,37 +132,52 @@ export default function GroupResults() {
         setSaveMessage("");
 
         try {
-            const updates = students.map(student => ({
-                student_id: student.id,
-                sport: sport,
-                group: group,
-                heights: getSportConfig().trackHeight ? attemptHeights[student.id] : null,
-                attempt_results: getSportConfig().trackHeight ? results[student.id] : null,
-                scores: !getSportConfig().trackHeight ? scores[student.id] : null,
-                best_result: getBestResult(student.id)
-            }));
+            for (const student of students) {
+                const bestResult = getBestResult(student.id);
+                const geschlecht = group.split("-")[1]; // z. B. "maennlich"
+                const sportCode = sport;
 
-            for (const update of updates) {
-                // Check if record exists
+                // Hole passende Punktzahl direkt aus Supabase
+                const { data: pointData } = await supabase
+                    .from("points_table")
+                    .select("punkte")
+                    .eq("geschlecht", geschlecht)
+                    .eq("sport_code", sportCode)
+                    .lte("leistung", bestResult) // 👈 NUR was wirklich erreicht wurde
+                    .order("punkte", { ascending: false }) // 👈 höchste Punktzahl zuerst
+                    .limit(1);
+
+
+                const punkte = pointData && pointData.length > 0 ? pointData[0].punkte : null;
+
+                const update = {
+                    student_id: student.id,
+                    sport: sport,
+                    group: group,
+                    heights: getSportConfig().trackHeight ? attemptHeights[student.id] : null,
+                    attempt_results: getSportConfig().trackHeight ? results[student.id] : null,
+                    scores: !getSportConfig().trackHeight ? scores[student.id] : null,
+                    best_result: bestResult,
+                    points: punkte, // direkt setzen
+                };
+
+                // Insert or Update wie gehabt
                 const { data: existingData } = await supabase
                     .from("results")
-                    .select("id")
+                    .select("*")
                     .eq("student_id", update.student_id)
                     .eq("sport", sport)
-                    .single();
+                    .maybeSingle(); // oder .single(), je nach Situation
+
 
                 if (existingData) {
                     const { error } = await supabase
                         .from("results")
                         .update(update)
                         .eq("id", existingData.id);
-
                     if (error) throw error;
                 } else {
-                    const { error } = await supabase
-                        .from("results")
-                        .insert(update);
-
+                    const { error } = await supabase.from("results").insert(update);
                     if (error) throw error;
                 }
             }
@@ -199,8 +214,8 @@ export default function GroupResults() {
 
     return (
         <div className="wrapper-container p-4">
-            <div className="transparent-container flex flex-col w-full mx-auto">
-                <h1 className="text-3xl font-semibold text-gray-900 text-center my-6">
+            <div className="transparent-container">
+                <h1 className="text-3xl font-semibold text-gray-900 mb-4">
                     Ergebnisse für {sport} ({group})
                 </h1>
 
@@ -212,9 +227,9 @@ export default function GroupResults() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
 
-                <div className="flex flex-col gap-4">
+                <div className="flex-grow overflow-y-auto flex flex-col gap-4">
                     {filteredStudents.map(student => (
-                        <div key={student.id} className="bg-white shadow-md p-4 rounded-lg border border-gray-300">
+                        <div key={student.id} className="bg-white shadow-md p-4 rounded-lg border border-gray-300 flex justify-between flex-col sm:flex-row">
                             <p className="text-lg font-medium text-gray-900 mb-2">{student.vorname} {student.nachname}</p>
                             <div className="flex flex-wrap gap-4 justify-center text-gray-900">
                                 {getSportConfig().trackHeight ? (
@@ -279,4 +294,5 @@ export default function GroupResults() {
             </div>
         </div>
     );
+
 }
