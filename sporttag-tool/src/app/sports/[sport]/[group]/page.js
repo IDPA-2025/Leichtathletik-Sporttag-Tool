@@ -14,17 +14,38 @@ export default function GroupResults() {
     const [scores, setScores] = useState({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState("");
+    const [showScale, setShowScale] = useState(false);
+    const [pointsData, setPointsData] = useState([]);
+    const [sportName, setSportName] = useState("");
+
 
     const getSportConfig = () => {
         const sportConfigs = {
             "80m": { unit: "sek", attempts: 1 },
             "huerdenlauf": { unit: "sek", attempts: 1 },
             "kugel": { unit: "meter", attempts: 3 },
-            "hoch": { unit: "m", attempts: 6, trackHeight: true },
+            "hoch": { unit: "meter", attempts: 6 },
             "speer": { unit: "meter", attempts: 3 },
         };
         return sportConfigs[sport.toLowerCase()] || { unit: "", attempts: 3 };
     };
+
+    useEffect(() => {
+        const fetchScale = async () => {
+            const geschlecht = group.split("-")[1];
+
+            const { data, error } = await supabase
+                .from("points_table")
+                .select("leistung, punkte")
+                .eq("sport_code", sport)
+                .eq("geschlecht", geschlecht)
+                .order("leistung", { ascending: false });
+
+            if (!error) setPointsData(data);
+        };
+
+        if (showScale) fetchScale();
+    }, [showScale, sport, group]);
 
     useEffect(() => {
         const fetchStudents = async () => {
@@ -41,6 +62,8 @@ export default function GroupResults() {
                 return;
             }
 
+            const numAttempts = getSportConfig().attempts;
+
             setStudents(data);
             setFilteredStudents(data);
 
@@ -48,20 +71,42 @@ export default function GroupResults() {
             const initialResults = {};
             const initialScores = {};
             data.forEach(student => {
-                initialAttemptHeights[student.id] = Array(getSportConfig().attempts).fill("");
-                initialResults[student.id] = Array(getSportConfig().attempts).fill(null);
-                initialScores[student.id] = Array(getSportConfig().attempts).fill("");
+                initialAttemptHeights[student.id] = Array(numAttempts).fill("");
+                initialResults[student.id] = Array(numAttempts).fill(null);
+                initialScores[student.id] = Array(numAttempts).fill("");
             });
+
             setAttemptHeights(initialAttemptHeights);
             setResults(initialResults);
             setScores(initialScores);
 
-            // Load existing results
             fetchExistingResults(data.map(s => s.id));
         };
 
         fetchStudents();
     }, [group, sport]);
+
+    useEffect(() => {
+        const fetchSportName = async () => {
+            const { data, error } = await supabase
+                .from("sports")
+                .select("name")
+                .eq("code", sport)
+                .single();
+
+            if (error) {
+                console.error("Fehler beim Laden des Sportnamens:", error);
+                return;
+            }
+
+            setSportName(data.name);
+        };
+
+        if (sport) {
+            fetchSportName();
+        }
+    }, [sport]);
+
 
     const fetchExistingResults = async (studentIds) => {
         const { data, error } = await supabase
@@ -76,14 +121,22 @@ export default function GroupResults() {
         }
 
         if (data && data.length > 0) {
+            const numAttempts = getSportConfig().attempts;
             const loadedAttemptHeights = {...attemptHeights};
             const loadedResults = {...results};
             const loadedScores = {...scores};
 
             data.forEach(result => {
-                if (result.heights) loadedAttemptHeights[result.student_id] = result.heights;
-                if (result.attempt_results) loadedResults[result.student_id] = result.attempt_results;
-                if (result.scores) loadedScores[result.student_id] = result.scores;
+                const processArray = (originalArray) => {
+                    if (!originalArray) return Array(numAttempts).fill("");
+                    return originalArray.length < numAttempts
+                        ? [...originalArray, ...Array(numAttempts - originalArray.length).fill("")]
+                        : originalArray.slice(0, numAttempts);
+                };
+
+                if (result.heights) loadedAttemptHeights[result.student_id] = processArray(result.heights);
+                if (result.attempt_results) loadedResults[result.student_id] = processArray(result.attempt_results);
+                if (result.scores) loadedScores[result.student_id] = processArray(result.scores);
             });
 
             setAttemptHeights(loadedAttemptHeights);
@@ -127,6 +180,21 @@ export default function GroupResults() {
         }));
     };
 
+    const getBestResult = (studentId) => {
+        if (sport.toLowerCase() === "hoch") {
+            const heightResults = attemptHeights[studentId].map((height, index) =>
+                results[studentId][index] === true ? parseFloat(height) || 0 : 0
+            );
+            return Math.max(...heightResults);
+        } else if (sport.toLowerCase() === "80m" || sport.toLowerCase() === "huerdenlauf") {
+            const numericScores = scores[studentId].map(score => parseFloat(score) || 0);
+            return Math.min(...numericScores.filter(score => score > 0)) || 0;
+        } else {
+            const numericScores = scores[studentId].map(score => parseFloat(score) || 0);
+            return Math.max(...numericScores) || 0;
+        }
+    };
+
     const saveResults = async () => {
         setIsSaving(true);
         setSaveMessage("");
@@ -134,19 +202,17 @@ export default function GroupResults() {
         try {
             for (const student of students) {
                 const bestResult = getBestResult(student.id);
-                const geschlecht = group.split("-")[1]; // z. B. "maennlich"
+                const geschlecht = group.split("-")[1];
                 const sportCode = sport;
 
-                // Hole passende Punktzahl direkt aus Supabase
                 const { data: pointData } = await supabase
                     .from("points_table")
                     .select("punkte")
                     .eq("geschlecht", geschlecht)
                     .eq("sport_code", sportCode)
-                    .lte("leistung", bestResult) // 👈 NUR was wirklich erreicht wurde
-                    .order("punkte", { ascending: false }) // 👈 höchste Punktzahl zuerst
+                    .lte("leistung", bestResult)
+                    .order("punkte", { ascending: false })
                     .limit(1);
-
 
                 const punkte = pointData && pointData.length > 0 ? pointData[0].punkte : null;
 
@@ -154,21 +220,19 @@ export default function GroupResults() {
                     student_id: student.id,
                     sport: sport,
                     group: group,
-                    heights: getSportConfig().trackHeight ? attemptHeights[student.id] : null,
-                    attempt_results: getSportConfig().trackHeight ? results[student.id] : null,
-                    scores: !getSportConfig().trackHeight ? scores[student.id] : null,
+                    heights: sport.toLowerCase() === "hoch" ? attemptHeights[student.id] : null,
+                    attempt_results: sport.toLowerCase() === "hoch" ? results[student.id] : null,
+                    scores: sport.toLowerCase() !== "hoch" ? scores[student.id] : null,
                     best_result: bestResult,
-                    points: punkte, // direkt setzen
+                    points: punkte,
                 };
 
-                // Insert or Update wie gehabt
                 const { data: existingData } = await supabase
                     .from("results")
                     .select("*")
                     .eq("student_id", update.student_id)
                     .eq("sport", sport)
-                    .maybeSingle(); // oder .single(), je nach Situation
-
+                    .maybeSingle();
 
                 if (existingData) {
                     const { error } = await supabase
@@ -192,32 +256,19 @@ export default function GroupResults() {
         }
     };
 
-    const getBestResult = (studentId) => {
-        if (getSportConfig().trackHeight) {
-            // For height-based sports, find the highest successful attempt
-            const heightResults = attemptHeights[studentId].map((height, index) =>
-                results[studentId][index] === true ? parseFloat(height) || 0 : 0
-            );
-            return Math.max(...heightResults);
-        } else {
-            // For other sports, find the best score
-            const numericScores = scores[studentId].map(score => parseFloat(score) || 0);
-            if (sport.toLowerCase() === "80m" || sport.toLowerCase() === "huerdenlauf") {
-                // For time-based sports, lower is better
-                return Math.min(...numericScores.filter(score => score > 0)) || 0;
-            } else {
-                // For distance-based sports, higher is better
-                return Math.max(...numericScores) || 0;
-            }
-        }
-    };
-
     return (
         <div className="wrapper-container p-4">
             <div className="transparent-container">
                 <h1 className="text-3xl font-semibold text-gray-900 mb-4">
-                    Ergebnisse für {sport} ({group})
+                    Ergebnisse für {sportName || sport}
                 </h1>
+
+                <button
+                    className="absolute top-0 left-0 mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium text-gray-800"
+                    onClick={() => setShowScale(true)}
+                >
+                    📋 Punkteskala anzeigen
+                </button>
 
                 <input
                     type="text"
@@ -229,10 +280,11 @@ export default function GroupResults() {
 
                 <div className="flex-grow overflow-y-auto flex flex-col gap-4">
                     {filteredStudents.map(student => (
-                        <div key={student.id} className="bg-white shadow-md p-4 rounded-lg border border-gray-300 flex justify-between flex-col sm:flex-row">
+                        <div key={student.id}
+                             className="bg-white shadow-md p-4 rounded-lg border border-gray-300 flex justify-between flex-col sm:flex-row">
                             <p className="text-lg font-medium text-gray-900 mb-2">{student.vorname} {student.nachname}</p>
                             <div className="flex flex-wrap gap-4 justify-center text-gray-900">
-                                {getSportConfig().trackHeight ? (
+                                {sport.toLowerCase() === "hoch" ? (
                                     attemptHeights[student.id]?.map((height, i) => (
                                         <div key={i} className="flex items-center gap-2 rounded-lg overflow-hidden p-2">
                                             <span className="font-semibold">{i + 1}.</span>
@@ -247,11 +299,13 @@ export default function GroupResults() {
                                             <button
                                                 className={`p-2 rounded-lg ${results[student.id][i] === true ? 'bg-green-400' : 'bg-gray-200'}`}
                                                 onClick={() => handleResultChange(student.id, i, true)}
-                                            >✔</button>
+                                            >✔
+                                            </button>
                                             <button
                                                 className={`p-2 rounded-lg ${results[student.id][i] === false ? 'bg-red-400' : 'bg-gray-200'}`}
                                                 onClick={() => handleResultChange(student.id, i, false)}
-                                            >✘</button>
+                                            >✘
+                                            </button>
                                         </div>
                                     ))
                                 ) : (
@@ -292,7 +346,44 @@ export default function GroupResults() {
                     </div>
                 )}
             </div>
+
+            {showScale && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/10 z-50">
+                    <div className="bg-white w-full max-w-md mx-4 p-6 rounded-2xl shadow-xl border border-gray-200">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                            Punkteskala – {sport}
+                        </h2>
+
+                        <div className="max-h-64 overflow-y-auto rounded border border-gray-200">
+                            <table className="w-full text-sm text-left text-gray-700">
+                                <thead className="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th className="px-4 py-2 font-semibold">Leistung</th>
+                                    <th className="px-4 py-2 font-semibold">Punkte</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {pointsData.map((row, i) => (
+                                    <tr key={i} className="hover:bg-gray-50">
+                                        <td className="px-4 py-2">{row.leistung}</td>
+                                        <td className="px-4 py-2">{row.punkte}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-6 text-right">
+                            <button
+                                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium"
+                                onClick={() => setShowScale(false)}
+                            >
+                                Schliessen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
-
 }

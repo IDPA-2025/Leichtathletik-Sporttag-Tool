@@ -8,6 +8,8 @@ import { supabase } from "../../lib/supabaseClient"
 export default function GroupOverview() {
     const { sport } = useParams()
     const [groups, setGroups] = useState([])
+    const [sportName, setSportName] = useState("");
+
 
     useEffect(() => {
         const fetchGroups = async () => {
@@ -32,13 +34,36 @@ export default function GroupOverview() {
         fetchGroups()
     }, [])
 
+    useEffect(() => {
+        const fetchSportName = async () => {
+            const { data, error } = await supabase
+                .from("sports")
+                .select("name")
+                .eq("code", sport)
+                .single();
+
+            if (error) {
+                console.error("Fehler beim Laden des Sportnamens:", error);
+                return;
+            }
+
+            setSportName(data.name);
+        };
+
+        if (sport) {
+            fetchSportName();
+        }
+    }, [sport]);
+
     return (
         <div className="wrapper-container h-screen flex flex-col">
             <div className="transparent-container flex flex-col items-center w-full">
 
                 {/* Gruppen Auswahl Titel */}
                 <div className="w-full py-6 flex items-center justify-center rounded-t-lg">
-                    <h1 className="text-4xl font-light text-gray-900">Gruppen für {sport}</h1>
+                    <h1 className="text-4xl font-light text-gray-900">
+                        Gruppen für {sportName || sport}
+                    </h1>
                 </div>
 
                 {/* Responsive Grid für Gruppen */}
