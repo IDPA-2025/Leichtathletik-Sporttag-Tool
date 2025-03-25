@@ -1,3 +1,4 @@
+// ✅ login/route.js – POST: Login & Cookie setzen
 import { NextResponse } from 'next/server';
 import { supabase } from '../../lib/supabaseClient';
 import jwt from 'jsonwebtoken';
@@ -11,7 +12,6 @@ export async function POST(req) {
             return NextResponse.json({ error: "Benutzername und Passwort sind erforderlich" }, { status: 400 });
         }
 
-        // Benutzer aus Supabase abrufen
         const { data: user, error } = await supabase
             .from('profiles')
             .select('id, username, password, role')
@@ -22,7 +22,6 @@ export async function POST(req) {
             return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 401 });
         }
 
-        // Passwort prüfen
         const bcrypt = await import('bcryptjs');
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
@@ -30,31 +29,25 @@ export async function POST(req) {
             return NextResponse.json({ error: "Falsches Passwort" }, { status: 401 });
         }
 
-        // JWT-Token generieren
         const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role }, // **Rolle wird im Token gespeichert**
+            { id: user.id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
 
-        // Cookie setzen (HttpOnly, für Server-Authentifizierung)
         const cookie = serialize('authToken', token, {
-            httpOnly: true, // HttpOnly für Middleware-Sicherheit
+            httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "Strict",
             path: "/",
-            maxAge: 3600 // 1 Stunde
+            maxAge: 3600
         });
 
-        // Antwort mit Set-Cookie Header
-        const response = NextResponse.json({ success: true, role: user.role, token });
+        const response = NextResponse.json({ success: true, role: user.role });
         response.headers.set('Set-Cookie', cookie);
 
-        console.log("✅ Login erfolgreich! Cookie:", cookie);
         return response;
-
     } catch (err) {
-        console.error("🔥 Serverfehler:", err);
-        return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
+        return NextResponse.json({ error: "Serverfehler" }, { status: 500 });
     }
 }

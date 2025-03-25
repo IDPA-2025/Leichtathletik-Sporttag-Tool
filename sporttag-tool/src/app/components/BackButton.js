@@ -11,23 +11,19 @@ export default function BackButton() {
 
 
     useEffect(() => {
-        const token = localStorage.getItem("authToken");
-        console.log("🔍 Auth-Token aus localStorage:", token);
-
-        if (token) {
+        const fetchRole = async () => {
             try {
-                const payloadBase64 = token.split(".")[1];
-                const decoded = JSON.parse(atob(payloadBase64));
-
-                console.log("✅ Decodiertes Token:", decoded);
-                setRole(decoded.role);
-            } catch (error) {
-                console.error("❌ Fehler beim Token-Parsing:", error);
+                const res = await fetch("/api/me");
+                const data = await res.json();
+                if (data.role) setRole(data.role);
+            } catch (err) {
+                console.warn("Nicht eingeloggt oder Fehler beim Abrufen der Rolle.");
             }
-        } else {
-            console.warn("⚠️ Kein Token gefunden!");
-        }
+        };
+
+        fetchRole();
     }, []);
+
 
 
     return (
