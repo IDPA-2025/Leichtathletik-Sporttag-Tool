@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 export async function GET() {
     const veranstaltungsDatum = new Date("2025-06-12");

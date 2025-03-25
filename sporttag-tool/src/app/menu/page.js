@@ -12,6 +12,8 @@ export default function Menu() {
         const res = await fetch("/api/me");
         const data = await res.json();
         if (data.role) setRole(data.role);
+        router.refresh();
+
       } catch (err) {
         console.warn("Nicht eingeloggt oder Fehler beim Abrufen der Rolle.");
       }
