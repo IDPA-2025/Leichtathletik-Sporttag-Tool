@@ -18,6 +18,7 @@ export default function GroupResults() {
     const [pointsData, setPointsData] = useState([]);
     const [sportName, setSportName] = useState("");
     const [showExport, setShowExport] = useState(false);
+    const [skippedStudents, setSkippedStudents] = useState({});
 
 
 
@@ -65,9 +66,13 @@ export default function GroupResults() {
             }
 
             const numAttempts = getSportConfig().attempts;
-
-            setStudents(data);
-            setFilteredStudents(data);
+            setStudents(data);             // ALLE Schüler setzen, inkl. skipped = true
+            setFilteredStudents(data);    // Auch die Suche arbeitet mit allen
+            const initialSkipped = {};
+                data.forEach(student => {
+                initialSkipped[student.id] = student.skipped || false;
+                });
+                setSkippedStudents(initialSkipped);
 
             const initialAttemptHeights = {};
             const initialResults = {};
@@ -144,6 +149,14 @@ export default function GroupResults() {
             setAttemptHeights(loadedAttemptHeights);
             setResults(loadedResults);
             setScores(loadedScores);
+
+            const loadedSkipped = { ...skippedStudents };
+            data.forEach(result => {
+                if (result.skipped !== undefined && result.student_id) {
+                    loadedSkipped[result.student_id] = result.skipped;
+                }
+            });
+            setSkippedStudents(loadedSkipped);
         }
     };
 
@@ -183,6 +196,10 @@ export default function GroupResults() {
     };
 
     const getBestResult = (studentId) => {
+        if (!scores[studentId] || !Array.isArray(scores[studentId])) return 0;
+        if (!results[studentId] || !Array.isArray(results[studentId])) return 0;
+        if (!attemptHeights[studentId] || !Array.isArray(attemptHeights[studentId])) return 0;
+    
         if (sport.toLowerCase() === "hoch") {
             const heightResults = attemptHeights[studentId].map((height, index) =>
                 results[studentId][index] === true ? parseFloat(height) || 0 : 0
@@ -198,6 +215,7 @@ export default function GroupResults() {
     };
 
     const saveResults = async () => {
+        
         setIsSaving(true);
         setSaveMessage("");
 
@@ -205,6 +223,7 @@ export default function GroupResults() {
             const zeitDisziplinen = ["80m", "huerdenlauf"];
 
             for (const student of students) {
+                const isSkipped = !!skippedStudents[student.id];
                 const bestResult = getBestResult(student.id);
                 const geschlecht = group.split("-")[1];
                 const sportCode = sport;
@@ -246,9 +265,10 @@ export default function GroupResults() {
                     heights: sport.toLowerCase() === "hoch" ? attemptHeights[student.id] : null,
                     attempt_results: sport.toLowerCase() === "hoch" ? results[student.id] : null,
                     scores: sport.toLowerCase() !== "hoch" ? scores[student.id] : null,
-                    best_result: bestResult,
-                    points: punkte,
-                };
+                    best_result: isSkipped ? null : bestResult,
+                    points: isSkipped ? null : punkte,
+                    skipped: isSkipped,
+                  };
 
                 // Insert oder Update
                 const { data: existingData } = await supabase
@@ -304,49 +324,69 @@ export default function GroupResults() {
 
                 <div className="flex-grow overflow-y-auto flex flex-col gap-4">
                     {filteredStudents.map(student => (
-                        <div key={student.id}
-                             className="bg-white shadow-md p-4 rounded-lg border border-gray-300 flex justify-between flex-col sm:flex-row">
+                        <div
+                            key={student.id}
+                            className={`bg-white shadow-md p-4 rounded-lg border border-gray-300 flex justify-between flex-col sm:flex-row`}
+                            style={skippedStudents[student.id] ? { textDecoration: 'line-through', opacity: 0.5 } : {}}
+                            >
                             <p className="text-lg font-medium text-gray-900 mb-2">{student.vorname} {student.nachname}</p>
+                            <label className="flex items-center gap-2 text-sm mb-2 text-red-600">
+                                <input
+                                    type="checkbox"
+                                    checked={!!skippedStudents[student.id]}
+                                    onChange={(e) =>
+                                    setSkippedStudents((prev) => ({
+                                        ...prev,
+                                        [student.id]: e.target.checked,
+                                    }))
+                                    }
+                                />
+                                Nicht teilgenommen
+                                </label>
                             <div className="flex flex-wrap gap-4 justify-center text-gray-900">
                                 {sport.toLowerCase() === "hoch" ? (
                                     attemptHeights[student.id]?.map((height, i) => (
                                         <div key={i} className="flex items-center gap-2 rounded-lg overflow-hidden p-2">
-                                            <span className="font-semibold">{i + 1}.</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="w-20 p-2 text-center border border-gray-300 rounded-lg"
-                                                value={height || ""}
-                                                onChange={(e) => handleInputChange(student.id, i, e.target.value, "height")}
-                                                placeholder="Höhe"
-                                            />
-                                            <button
-                                                className={`p-2 rounded-lg ${results[student.id][i] === true ? 'bg-green-400' : 'bg-gray-200'}`}
-                                                onClick={() => handleResultChange(student.id, i, true)}
-                                            >✔
-                                            </button>
-                                            <button
-                                                className={`p-2 rounded-lg ${results[student.id][i] === false ? 'bg-red-400' : 'bg-gray-200'}`}
-                                                onClick={() => handleResultChange(student.id, i, false)}
-                                            >✘
-                                            </button>
+                                        <span className="font-semibold">{i + 1}.</span>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="w-20 p-2 text-center border border-gray-300 rounded-lg"
+                                            value={height || ""}
+                                            onChange={(e) => handleInputChange(student.id, i, e.target.value, "height")}
+                                            placeholder="Höhe"
+                                            disabled={!!skippedStudents[student.id]}
+                                            title={skippedStudents[student.id] ? "Nicht teilgenommen" : ""}
+                                        />
+                                        <button
+                                            className={`p-2 rounded-lg ${results[student.id][i] === true ? 'bg-green-400' : 'bg-gray-200'}`}
+                                            onClick={() => handleResultChange(student.id, i, true)}
+                                            disabled={!!skippedStudents[student.id]}
+                                        >✔</button>
+                                        <button
+                                            className={`p-2 rounded-lg ${results[student.id][i] === false ? 'bg-red-400' : 'bg-gray-200'}`}
+                                            onClick={() => handleResultChange(student.id, i, false)}
+                                            disabled={!!skippedStudents[student.id]}
+                                        >✘</button>
                                         </div>
                                     ))
                                 ) : (
                                     scores[student.id]?.map((score, i) => (
                                         <div key={i} className="flex items-center gap-2">
-                                            <span className="font-semibold">{i + 1}.</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="w-20 p-2 text-center border border-gray-300 rounded-lg"
-                                                value={score || ""}
-                                                onChange={(e) => handleInputChange(student.id, i, e.target.value, "score")}
-                                                placeholder="Wert"
-                                            />
-                                            <span className="text-sm text-gray-500">{getSportConfig().unit}</span>
+                                          <span className="font-semibold">{i + 1}.</span>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            className="w-20 p-2 text-center border border-gray-300 rounded-lg"
+                                            value={score || ""}
+                                            onChange={(e) => handleInputChange(student.id, i, e.target.value, "score")}
+                                            placeholder="Wert"
+                                            disabled={!!skippedStudents[student.id]}
+                                            title={skippedStudents[student.id] ? "Nicht teilgenommen" : ""}
+                                          />
+                                          <span className="text-sm text-gray-500">{getSportConfig().unit}</span>
                                         </div>
-                                    ))
+                                      ))
                                 )}
                             </div>
                         </div>
