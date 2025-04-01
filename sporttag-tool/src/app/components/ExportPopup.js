@@ -73,7 +73,19 @@ export default function ExportPopup({ onClose }) {
         }
     };
 
+    const generateExportFilename = () => {
+        if (mode === "preset") {
+            return preset === "preset1"
+                ? "Rangliste_Altersgruppe_Geschlecht"
+                : "Rangliste_Klasse_Geschlecht";
+        } else {
+            return `Rangliste_${filters.geschlecht}_${filters.altersgruppe}`;
+        }
+    };
+
     const handleExport = () => {
+        const filename = generateExportFilename();
+
         if (exportType === "csv") {
             const rows = [];
             Object.entries(ranglisten).forEach(([kategorie, list]) => {
@@ -87,7 +99,7 @@ export default function ExportPopup({ onClose }) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "ranglisten_export.csv";
+            a.download = `${filename}.csv`;
             a.click();
             URL.revokeObjectURL(url);
         } else if (exportType === "pdf") {
@@ -106,7 +118,7 @@ export default function ExportPopup({ onClose }) {
                 });
                 pos = doc.lastAutoTable.finalY + 10;
             });
-            doc.save("ranglisten.pdf");
+            doc.save(`${filename}.pdf`);
         } else if (exportType === "excel") {
             const wb = XLSX.utils.book_new();
             Object.entries(ranglisten).forEach(([kategorie, list]) => {
@@ -115,7 +127,7 @@ export default function ExportPopup({ onClose }) {
                 const ws = XLSX.utils.aoa_to_sheet(ws_data);
                 XLSX.utils.book_append_sheet(wb, ws, kategorie.substring(0, 31));
             });
-            XLSX.writeFile(wb, "ranglisten.xlsx");
+            XLSX.writeFile(wb, `${filename}.xlsx`);
         }
     };
 
