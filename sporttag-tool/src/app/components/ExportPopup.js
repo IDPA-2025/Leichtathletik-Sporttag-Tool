@@ -15,10 +15,23 @@ export default function ExportPopup({ onClose }) {
     const [exportType, setExportType] = useState("csv");
     const [preset, setPreset] = useState("preset1");
     const [mode, setMode] = useState("preset");
+    const [showDetails, setShowDetails] = useState(false);
+
 
     const handleGenerateRanking = async () => {
         setIsGenerating(true);
         setMessage("");
+
+        const ageCategoryLabels = {
+            "-15": "bis 15",
+            "16-17": "16 bis 17",
+            "18+": "18+"
+        };
+
+        const genderLabels = {
+            maennlich: "Männlich",
+            weiblich: "Weiblich"
+        };
 
         try {
             const { data: students, error } = await supabase
@@ -28,7 +41,26 @@ export default function ExportPopup({ onClose }) {
 
             if (error) throw error;
 
+            const { data: results, error: resultsError } = await supabase
+                .from("results")
+                .select("student_id, sport, scores");
+
+            if (resultsError) throw resultsError;
+
+// Ergebnisse pro Student mappen
+            const resultsMap = {};
+            for (const r of results) {
+                if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
+                resultsMap[r.student_id][r.sport] = r.scores?.value ?? r.scores;
+            }
+
+// Ergebnisse in Student einfügen
+            students.forEach(student => {
+                student.resultDetails = resultsMap[student.id] || {};
+            });
+
             const listen = {};
+            const titles = {};
 
             if (mode === "preset") {
                 if (preset === "preset1") {
@@ -39,6 +71,7 @@ export default function ExportPopup({ onClose }) {
                             const key = `${geschlecht}-${kategorie}`;
                             const filtered = students.filter(s => s.geschlecht === geschlecht && s.age_category === kategorie);
                             listen[key] = filtered.sort((a, b) => b.total_points - a.total_points);
+                            titles[key] = `Rangliste für ${genderLabels[geschlecht]} in der Alterskategorie ${ageCategoryLabels[kategorie]}`;
                         }
                     }
                 } else if (preset === "preset2") {
@@ -49,6 +82,7 @@ export default function ExportPopup({ onClose }) {
                             const key = `${klasse}-${geschlecht}`;
                             const filtered = students.filter(s => s.klasse === klasse && s.geschlecht === geschlecht);
                             listen[key] = filtered.sort((a, b) => b.total_points - a.total_points);
+                            titles[key] = `Rangliste für ${geschlecht} in der Klasse ${klasse}`;
                         }
                     }
                 }
@@ -61,10 +95,14 @@ export default function ExportPopup({ onClose }) {
                     filtered = filtered.filter(s => s.age_category === filters.altersgruppe);
                 }
                 listen["Benutzerdefiniert"] = filtered.sort((a, b) => b.total_points - a.total_points);
+                titles["Benutzerdefiniert"] = `Rangliste für ${genderLabels[filters.geschlecht]} in der Altersgruppe ${ageCategoryLabels[filters.altersgruppe] || filters.altersgruppe}`;
             }
 
             setRanglisten(listen);
             setStep(2);
+
+            // Optional: wenn du die Titel später brauchst
+            window.exportTitles = titles;
         } catch (err) {
             console.error("Fehler beim Generieren:", err);
             setMessage("❌ Fehler: " + (err.message || JSON.stringify(err)));
@@ -85,11 +123,12 @@ export default function ExportPopup({ onClose }) {
 
     const handleExport = () => {
         const filename = generateExportFilename();
+        const titles = window.exportTitles || {};
 
         if (exportType === "csv") {
             const rows = [];
             Object.entries(ranglisten).forEach(([kategorie, list]) => {
-                rows.push([`Kategorie: ${kategorie}`]);
+                rows.push([titles[kategorie] || `Kategorie: ${kategorie}`]);
                 rows.push(["Rang", "Vorname", "Nachname", "Punkte"]);
                 list.forEach((s, i) => rows.push([i + 1, s.vorname, s.nachname, s.total_points]));
                 rows.push([]);
@@ -105,9 +144,15 @@ export default function ExportPopup({ onClose }) {
         } else if (exportType === "pdf") {
             const doc = new jsPDF();
             let pos = 10;
-            Object.entries(ranglisten).forEach(([key, list], idx) => {
-                doc.text(`Kategorie: ${key}`, 10, pos);
+
+            Object.entries(ranglisten).forEach(([key, list]) => {
+                // Titel fett
+                doc.setFont("helvetica", "bold");
+                doc.text(titles[key] || `Kategorie: ${key}`, 10, pos);
+                doc.setFont("helvetica", "normal");
                 pos += 6;
+
+                // Rangliste Tabelle
                 autoTable(doc, {
                     startY: pos,
                     head: [["Rang", "Vorname", "Nachname", "Punkte"]],
@@ -116,16 +161,58 @@ export default function ExportPopup({ onClose }) {
                     headStyles: { fillColor: [41, 128, 185] },
                     styles: { fontSize: 10 }
                 });
-                pos = doc.lastAutoTable.finalY + 10;
+
+                pos = doc.lastAutoTable.finalY + 6;
+
+                // Optional: Disziplin-Ergebnisse
+                if (showDetails) {
+                    doc.setFontSize(9);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Disziplinen & Resultate:", 12, pos);
+                    pos += 4;
+                    doc.setFont("helvetica", "normal");
+
+                    list.forEach((s, i) => {
+                        // Name fett
+                        doc.setFont("helvetica", "bold");
+                        let line = `${s.vorname} ${s.nachname}: `;
+                        doc.setFont("helvetica", "normal");
+
+                        // Resultate nebeneinander anfügen
+                        const details = s.resultDetails || {};
+                        const resultStrings = Object.entries(details)
+                            .filter(([_, punkte]) => punkte !== undefined && punkte !== null && punkte !== "")
+                            .map(([sport, punkte]) => `${sport}: ${punkte}`);
+                        line += resultStrings.join("   "); // mehrere Leerzeichen für Abstand
+
+                        doc.text(line, 14, pos);
+                        pos += 5;
+                    });
+
+                    doc.setFontSize(10); // Reset
+                    pos += 6;
+                }
+
             });
+
             doc.save(`${filename}.pdf`);
         } else if (exportType === "excel") {
             const wb = XLSX.utils.book_new();
             Object.entries(ranglisten).forEach(([kategorie, list]) => {
                 const ws_data = [["Rang", "Vorname", "Nachname", "Punkte"]];
-                list.forEach((s, i) => ws_data.push([i + 1, s.vorname, s.nachname, s.total_points]));
+                list.forEach((s, i) => {
+                    ws_data.push([i + 1, s.vorname, s.nachname, s.total_points]);
+
+                    if (showDetails) {
+                        const details = s.resultDetails || {};
+                        Object.entries(details).forEach(([sport, punkte]) => {
+                            ws_data.push([null, "", `${sport}:`, punkte]);
+                        });
+                        ws_data.push([]);
+                    }
+                });
                 const ws = XLSX.utils.aoa_to_sheet(ws_data);
-                XLSX.utils.book_append_sheet(wb, ws, kategorie.substring(0, 31));
+                XLSX.utils.book_append_sheet(wb, ws, (titles[kategorie] || kategorie).substring(0, 31));
             });
             XLSX.writeFile(wb, `${filename}.xlsx`);
         }
@@ -139,32 +226,38 @@ export default function ExportPopup({ onClose }) {
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Rangliste generieren</h2>
                         <p className="text-gray-700 mb-4">Wähle eine Vorlage oder definiere eigene Filter.</p>
 
-                        <div className="mb-4">
+                        <div className="mb-4 text-gray-900">
                             <label className="block mb-2 font-medium text-sm">Modus wählen:</label>
-                            <select value={mode} onChange={e => setMode(e.target.value)} className="w-full p-2 border rounded">
+                            <select value={mode} onChange={e => setMode(e.target.value)}
+                                    className="w-full p-2 border rounded">
                                 <option value="preset">📋 Vorlage verwenden</option>
                                 <option value="custom">⚙️ Eigene Filter definieren</option>
                             </select>
                         </div>
 
                         {mode === "preset" ? (
-                            <div className="mb-4">
+                            <div className="mb-4 text-gray-900">
                                 <label className="block mb-2 font-medium text-sm">Vorlage:</label>
-                                <select value={preset} onChange={e => setPreset(e.target.value)} className="w-full p-2 border rounded">
+                                <select value={preset} onChange={e => setPreset(e.target.value)}
+                                        className="w-full p-2 border rounded">
                                     <option value="preset1">Nach Alterskategorie & Geschlecht</option>
                                     <option value="preset2">Nach Klasse & Geschlecht</option>
                                 </select>
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-2 mb-4">
-                                <label className="text-sm">Geschlecht</label>
-                                <select value={filters.geschlecht} onChange={e => setFilters(prev => ({ ...prev, geschlecht: e.target.value }))} className="w-full p-2 border rounded">
+                            <div className="flex flex-col gap-2 mb-4 text-gray-900">
+                                <label className="text-sm ">Geschlecht</label>
+                                <select value={filters.geschlecht}
+                                        onChange={e => setFilters(prev => ({...prev, geschlecht: e.target.value}))}
+                                        className="w-full p-2 border rounded">
                                     <option value="alle">Alle</option>
                                     <option value="maennlich">Männlich</option>
                                     <option value="weiblich">Weiblich</option>
                                 </select>
                                 <label className="text-sm">Altersgruppe</label>
-                                <select value={filters.altersgruppe} onChange={e => setFilters(prev => ({ ...prev, altersgruppe: e.target.value }))} className="w-full p-2 border rounded">
+                                <select value={filters.altersgruppe}
+                                        onChange={e => setFilters(prev => ({...prev, altersgruppe: e.target.value}))}
+                                        className="w-full p-2 border rounded">
                                     <option value="alle">Alle</option>
                                     <option value="-15">-15</option>
                                     <option value="16-17">16-17</option>
@@ -173,9 +266,21 @@ export default function ExportPopup({ onClose }) {
                             </div>
                         )}
 
-                        <div className="mb-4">
+                        <div className="mt-2 flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="showDetails"
+                                checked={showDetails}
+                                onChange={() => setShowDetails(prev => !prev)}
+                            />
+                            <label htmlFor="showDetails" className="text-sm text-gray-800">Disziplin-Resultate
+                                anzeigen</label>
+                        </div>
+
+                        <div className="text-gray-900 mb-4">
                             <label className="block mb-2 font-medium text-sm">Exportformat:</label>
-                            <select value={exportType} onChange={e => setExportType(e.target.value)} className="w-full p-2 border rounded">
+                            <select value={exportType} onChange={e => setExportType(e.target.value)}
+                                    className="w-full p-2 border rounded">
                                 <option value="csv">CSV</option>
                                 <option value="pdf">PDF</option>
                                 <option value="excel">Excel</option>
