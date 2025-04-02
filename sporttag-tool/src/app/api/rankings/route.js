@@ -12,7 +12,6 @@ export async function GET() {
         return Response.json({ error: "Fehler beim Laden der Schüler" }, { status: 500 });
     }
 
-    const skippedCount = results.filter(r => r.student_id === s.id && r.skipped).length;
 
     // Alle Resultate holen mit Punkten
     const { data: results, error: resultError } = await supabase
@@ -56,12 +55,13 @@ export async function GET() {
         const alter = berechneAlter(s.geburtsdatum);
         return {
             id: s.id,
-            name: `${s.vorname} ${s.nachname}`,
+            vorname: s.vorname,
+            nachname: s.nachname,
             klasse: s.klasse,
             geschlecht: s.geschlecht,
             alter,
             kategorie: getKategorie(alter),
-            punkte: punkteMap.get(s.id) || 0,
+            total_points: punkteMap.get(s.id) || 0,
         };
     });
 
@@ -81,12 +81,22 @@ export async function GET() {
         gruppierteRanglisten[key].sort((a, b) => b.punkte - a.punkte);
     }
 
+    // Punkte in students Tabelle speichern
+    for (const [studentId, punkte] of punkteMap.entries()) {
+        await supabase
+            .from("students")
+            .update({ total_points: punkte })
+            .eq("id", studentId);
+    }
+
+
     // Abwesende extra aufführen
     const abwesende = students
         .filter(s => !s.anwesend)
         .map(s => ({
             id: s.id,
-            name: `${s.vorname} ${s.nachname}`,
+            vorname: s.vorname,
+            nachname: s.nachname,
             klasse: s.klasse,
             geschlecht: s.geschlecht
         }));

@@ -22,24 +22,11 @@ export default function ExportPopup({ onClose }) {
         setIsGenerating(true);
         setMessage("");
 
-        const ageCategoryLabels = {
-            "-15": "bis 15",
-            "16-17": "16 bis 17",
-            "18+": "18+"
-        };
-
-        const genderLabels = {
-            maennlich: "Männlich",
-            weiblich: "Weiblich"
-        };
-
         try {
-            const { data: students, error } = await supabase
-                .from("students")
-                .select("id, geschlecht, age_category, klasse, total_points, vorname, nachname")
-                .not("total_points", "is", null);
+            const res = await fetch("/api/rankings");
+            const json = await res.json();
 
-            if (error) throw error;
+            if (!res.ok || !json.rankings) throw new Error(json.error || "Fehler beim Laden der Rankings");
 
             const { data: results, error: resultsError } = await supabase
                 .from("results")
@@ -47,62 +34,59 @@ export default function ExportPopup({ onClose }) {
 
             if (resultsError) throw resultsError;
 
-// Ergebnisse pro Student mappen
             const resultsMap = {};
             for (const r of results) {
                 if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
                 resultsMap[r.student_id][r.sport] = r.scores?.value ?? r.scores;
             }
 
-// Ergebnisse in Student einfügen
-            students.forEach(student => {
-                student.resultDetails = resultsMap[student.id] || {};
-            });
-
-            const listen = {};
+            const rankings = json.rankings;
             const titles = {};
+            const listen = {};
+
+            for (const [key, list] of Object.entries(rankings)) {
+                listen[key] = list
+                    .map((s) => ({
+                        ...s,
+                        vorname: s.vorname || s.name?.split(" ")[0] || "",
+                        nachname: s.nachname || s.name?.split(" ")[1] || "",
+                        total_points: s.total_points || s.punkte || 0,
+                        resultDetails: resultsMap[s.id] || {},
+                    }))
+                    .sort((a, b) => b.total_points - a.total_points);
+            }
 
             if (mode === "preset") {
                 if (preset === "preset1") {
-                    const kategorien = ["-15", "16-17", "18+"];
-                    const geschlechter = ["maennlich", "weiblich"];
-                    for (const kategorie of kategorien) {
-                        for (const geschlecht of geschlechter) {
-                            const key = `${geschlecht}-${kategorie}`;
-                            const filtered = students.filter(s => s.geschlecht === geschlecht && s.age_category === kategorie);
-                            listen[key] = filtered.sort((a, b) => b.total_points - a.total_points);
-                            titles[key] = `Rangliste für ${genderLabels[geschlecht]} in der Alterskategorie ${ageCategoryLabels[kategorie]}`;
-                        }
+                    for (const key of Object.keys(listen)) {
+                        const [kategorie, geschlecht] = key.split("-");
+                        titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${kategorie.replace("unter16", "bis 15").replace("16bis17", "16 bis 17").replace("ueber18", "18+")}`;
                     }
                 } else if (preset === "preset2") {
-                    const geschlechter = ["maennlich", "weiblich"];
-                    const klassen = [...new Set(students.map(s => s.klasse))];
-                    for (const klasse of klassen) {
-                        for (const geschlecht of geschlechter) {
-                            const key = `${klasse}-${geschlecht}`;
-                            const filtered = students.filter(s => s.klasse === klasse && s.geschlecht === geschlecht);
-                            listen[key] = filtered.sort((a, b) => b.total_points - a.total_points);
-                            titles[key] = `Rangliste für ${geschlecht} in der Klasse ${klasse}`;
-                        }
+                    for (const key of Object.keys(listen)) {
+                        const [klasse, geschlecht] = key.split("-");
+                        titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${klasse}`;
                     }
                 }
             } else {
-                let filtered = students;
+                let merged = Object.values(listen).flat();
                 if (filters.geschlecht !== "alle") {
-                    filtered = filtered.filter(s => s.geschlecht === filters.geschlecht);
+                    merged = merged.filter(s => s.geschlecht === filters.geschlecht);
                 }
                 if (filters.altersgruppe !== "alle") {
-                    filtered = filtered.filter(s => s.age_category === filters.altersgruppe);
+                    merged = merged.filter(s => {
+                        if (filters.altersgruppe === "-15") return s.alter < 16;
+                        if (filters.altersgruppe === "16-17") return s.alter >= 16 && s.alter <= 17;
+                        return s.alter > 17;
+                    });
                 }
-                listen["Benutzerdefiniert"] = filtered.sort((a, b) => b.total_points - a.total_points);
-                titles["Benutzerdefiniert"] = `Rangliste für ${genderLabels[filters.geschlecht]} in der Altersgruppe ${ageCategoryLabels[filters.altersgruppe] || filters.altersgruppe}`;
+                listen["Benutzerdefiniert"] = merged.sort((a, b) => b.total_points - a.total_points);
+                titles["Benutzerdefiniert"] = `Rangliste für ${filters.geschlecht} in der Altersgruppe ${filters.altersgruppe}`;
             }
 
             setRanglisten(listen);
-            setStep(2);
-
-            // Optional: wenn du die Titel später brauchst
             window.exportTitles = titles;
+            setStep(2);
         } catch (err) {
             console.error("Fehler beim Generieren:", err);
             setMessage("❌ Fehler: " + (err.message || JSON.stringify(err)));
@@ -110,6 +94,7 @@ export default function ExportPopup({ onClose }) {
             setIsGenerating(false);
         }
     };
+
 
     const generateExportFilename = () => {
         if (mode === "preset") {
@@ -121,19 +106,71 @@ export default function ExportPopup({ onClose }) {
         }
     };
 
+
     const handleExport = () => {
         const filename = generateExportFilename();
         const titles = window.exportTitles || {};
+        const sportHeaders = showDetails ? window.sportHeaders || [] : [];
 
-        if (exportType === "csv") {
-            const rows = [];
-            Object.entries(ranglisten).forEach(([kategorie, list]) => {
-                rows.push([titles[kategorie] || `Kategorie: ${kategorie}`]);
-                rows.push(["Rang", "Vorname", "Nachname", "Punkte"]);
-                list.forEach((s, i) => rows.push([i + 1, s.vorname, s.nachname, s.total_points]));
-                rows.push([]);
+        const allKeys = Object.keys(ranglisten);
+
+        if (exportType === "pdf") {
+            const doc = new jsPDF();
+            let pos = 10;
+
+            allKeys.forEach((key, idx) => {
+                const list = ranglisten[key];
+                doc.setFont("helvetica", "bold");
+                doc.text(titles[key] || key, 10, pos);
+                doc.setFont("helvetica", "normal");
+                pos += 6;
+
+                const headers = ["Rang", "Vorname", "Nachname", "Totale Punkte", ...sportHeaders];
+
+                const body = list.map((s, i) => [
+                    i + 1,
+                    s.vorname,
+                    s.nachname,
+                    s.total_points,
+                    ...sportHeaders.map(sport => s.resultDetails?.[sport] ?? "")
+                ]);
+
+                autoTable(doc, {
+                    startY: pos,
+                    head: [headers],
+                    body,
+                    theme: "striped",
+                    headStyles: { fillColor: [41, 128, 185], fontSize: 7 },
+                    styles: { fontSize: 7, cellPadding: 1 }
+                });
+
+                pos = doc.lastAutoTable.finalY + 10;
+                if (idx !== allKeys.length - 1) {
+                    doc.addPage();
+                    pos = 10;
+                }
             });
-            const csv = rows.map(r => r.join(",")).join("\n");
+
+            doc.save(`${filename}.pdf`);
+        } else if (exportType === "csv") {
+            let csv = "";
+            allKeys.forEach((key) => {
+                const list = ranglisten[key];
+                csv += `\n"${titles[key] || key}"\n`;
+                const headers = ["Rang", "Vorname", "Nachname", "Totale Punkte", ...sportHeaders];
+                csv += headers.join(",") + "\n";
+                list.forEach((s, i) => {
+                    const row = [
+                        i + 1,
+                        s.vorname,
+                        s.nachname,
+                        s.total_points,
+                        ...sportHeaders.map(sport => s.resultDetails?.[sport] ?? "")
+                    ];
+                    csv += row.join(",") + "\n";
+                });
+            });
+
             const blob = new Blob([csv], { type: "text/csv" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -141,79 +178,24 @@ export default function ExportPopup({ onClose }) {
             a.download = `${filename}.csv`;
             a.click();
             URL.revokeObjectURL(url);
-        } else if (exportType === "pdf") {
-            const doc = new jsPDF();
-            let pos = 10;
-
-            Object.entries(ranglisten).forEach(([key, list]) => {
-                // Titel fett
-                doc.setFont("helvetica", "bold");
-                doc.text(titles[key] || `Kategorie: ${key}`, 10, pos);
-                doc.setFont("helvetica", "normal");
-                pos += 6;
-
-                // Rangliste Tabelle
-                autoTable(doc, {
-                    startY: pos,
-                    head: [["Rang", "Vorname", "Nachname", "Punkte"]],
-                    body: list.map((s, i) => [i + 1, s.vorname, s.nachname, s.total_points]),
-                    theme: "striped",
-                    headStyles: { fillColor: [41, 128, 185] },
-                    styles: { fontSize: 10 }
-                });
-
-                pos = doc.lastAutoTable.finalY + 6;
-
-                // Optional: Disziplin-Ergebnisse
-                if (showDetails) {
-                    doc.setFontSize(9);
-                    doc.setFont("helvetica", "bold");
-                    doc.text("Disziplinen & Resultate:", 12, pos);
-                    pos += 4;
-                    doc.setFont("helvetica", "normal");
-
-                    list.forEach((s, i) => {
-                        // Name fett
-                        doc.setFont("helvetica", "bold");
-                        let line = `${s.vorname} ${s.nachname}: `;
-                        doc.setFont("helvetica", "normal");
-
-                        // Resultate nebeneinander anfügen
-                        const details = s.resultDetails || {};
-                        const resultStrings = Object.entries(details)
-                            .filter(([_, punkte]) => punkte !== undefined && punkte !== null && punkte !== "")
-                            .map(([sport, punkte]) => `${sport}: ${punkte}`);
-                        line += resultStrings.join("   "); // mehrere Leerzeichen für Abstand
-
-                        doc.text(line, 14, pos);
-                        pos += 5;
-                    });
-
-                    doc.setFontSize(10); // Reset
-                    pos += 6;
-                }
-
-            });
-
-            doc.save(`${filename}.pdf`);
         } else if (exportType === "excel") {
             const wb = XLSX.utils.book_new();
-            Object.entries(ranglisten).forEach(([kategorie, list]) => {
-                const ws_data = [["Rang", "Vorname", "Nachname", "Punkte"]];
-                list.forEach((s, i) => {
-                    ws_data.push([i + 1, s.vorname, s.nachname, s.total_points]);
 
-                    if (showDetails) {
-                        const details = s.resultDetails || {};
-                        Object.entries(details).forEach(([sport, punkte]) => {
-                            ws_data.push([null, "", `${sport}:`, punkte]);
-                        });
-                        ws_data.push([]);
-                    }
-                });
-                const ws = XLSX.utils.aoa_to_sheet(ws_data);
-                XLSX.utils.book_append_sheet(wb, ws, (titles[kategorie] || kategorie).substring(0, 31));
+            allKeys.forEach((key) => {
+                const list = ranglisten[key];
+                const headers = ["Rang", "Vorname", "Nachname", "Totale Punkte", ...sportHeaders];
+                const rows = list.map((s, i) => [
+                    i + 1,
+                    s.vorname,
+                    s.nachname,
+                    s.total_points,
+                    ...sportHeaders.map(sport => s.resultDetails?.[sport] ?? "")
+                ]);
+
+                const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                XLSX.utils.book_append_sheet(wb, sheet, key.substring(0, 31));
             });
+
             XLSX.writeFile(wb, `${filename}.xlsx`);
         }
     };
