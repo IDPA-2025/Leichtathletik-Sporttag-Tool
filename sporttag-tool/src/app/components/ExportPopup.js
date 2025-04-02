@@ -44,6 +44,13 @@ export default function ExportPopup({ onClose }) {
                 sportUnitMap[s.code] = s.mesure_unit_short;
             }
 
+            const sportNameMap = {};
+            for (const s of sports) {
+                sportNameMap[s.code] = s.name;
+            }
+            window.sportNameMap = sportNameMap;
+
+
 
             const resultsMap = {};
             for (const r of results) {
@@ -151,7 +158,10 @@ export default function ExportPopup({ onClose }) {
                 doc.setFont("helvetica", "normal");
                 pos += 6;
 
-                const headers = ["Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte", ...sportHeaders];
+                const headers = [
+                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
+                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
+                ];
 
                 const body = list.map((s, i) => [
                     i + 1,
@@ -215,7 +225,10 @@ export default function ExportPopup({ onClose }) {
             allKeys.forEach((key) => {
                 const list = ranglisten[key];
                 csv += `\n"${titles[key] || key}"\n`;
-                const headers = ["Rang", "Vorname", "Nachname", "Totale Punkte", ...sportHeaders];
+                const headers = [
+                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
+                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
+                ];
                 csv += headers.join(",") + "\n";
                 list.forEach((s, i) => {
                     const row = [
@@ -241,7 +254,10 @@ export default function ExportPopup({ onClose }) {
 
             allKeys.forEach((key) => {
                 const list = ranglisten[key];
-                const headers = ["Rang", "Vorname", "Nachname", "Totale Punkte", ...sportHeaders];
+                const headers = [
+                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
+                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
+                ];
                 const rows = list.map((s, i) => [
                     i + 1,
                     s.vorname,
