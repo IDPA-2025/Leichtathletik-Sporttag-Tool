@@ -6,6 +6,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
+
 export default function ExportPopup({ onClose }) {
     const [step, setStep] = useState(1);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -30,14 +31,24 @@ export default function ExportPopup({ onClose }) {
 
             const { data: results, error: resultsError } = await supabase
                 .from("results")
-                .select("student_id, sport, scores");
-
+                .select("student_id, sport, best_result");
             if (resultsError) throw resultsError;
+
+            const { data: sports, error: sportsError } = await supabase
+                .from("sports")
+                .select("code, name, mesure_unit_short");
+            if (sportsError) throw sportsError;
+
+            const sportUnitMap = {};
+            for (const s of sports) {
+                sportUnitMap[s.code] = s.mesure_unit_short;
+            }
+
 
             const resultsMap = {};
             for (const r of results) {
                 if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
-                resultsMap[r.student_id][r.sport] = r.scores?.value ?? r.scores;
+                resultsMap[r.student_id][r.sport] = r.best_result?.value ?? r.best_result;
             }
 
             const rankings = json.rankings;
@@ -56,13 +67,14 @@ export default function ExportPopup({ onClose }) {
                     .sort((a, b) => b.total_points - a.total_points);
             }
 
-            // console log all sports from reultsMap r.sport
             const allSports = new Set();
             for (const studentId in resultsMap) {
                 for (const sport in resultsMap[studentId]) {
                     allSports.add(sport);
                 }
             }
+
+
 
             if (mode === "preset") {
                 if (preset === "preset1") {
@@ -95,6 +107,9 @@ export default function ExportPopup({ onClose }) {
             setRanglisten(listen);
             window.exportTitles = titles;
             window.sportHeaders = Array.from(allSports);
+            window.sportUnitMap = sportUnitMap;
+
+
             setStep(2);
         } catch (err) {
             console.error("Fehler beim Generieren:", err);
@@ -120,6 +135,8 @@ export default function ExportPopup({ onClose }) {
         const filename = generateExportFilename();
         const titles = window.exportTitles || {};
         const sportHeaders = showDetails ? window.sportHeaders || [] : [];
+        const sportUnitMap = window.sportUnitMap || {};
+
 
         const allKeys = Object.keys(ranglisten);
 
@@ -142,7 +159,11 @@ export default function ExportPopup({ onClose }) {
                     s.nachname,
                     s.klasse,
                     s.total_points,
-                    ...sportHeaders.map(sport => s.resultDetails?.[sport] ?? "")
+                    ...sportHeaders.map(sport => {
+                        const value = s.resultDetails?.[sport];
+                        const unit = sportUnitMap[sport] || "";
+                        return value !== undefined && value !== null ? `${value} ${unit}` : "";
+                    })
                 ]);
 
                 autoTable(doc, {
@@ -151,8 +172,35 @@ export default function ExportPopup({ onClose }) {
                     body,
                     theme: "striped",
                     headStyles: { fillColor: [41, 128, 185], fontSize: 7 },
-                    styles: { fontSize: 7, cellPadding: 1 }
+                    styles: { fontSize: 7, cellPadding: 1 },
+
+                    didParseCell: function (data) {
+                        const student = list[data.row.index];
+
+                        if (data.section === "body") {
+                            // 🥇 Gold für Platz 1
+                            if (data.row.index === 0) {
+                                data.cell.styles.fillColor = [255, 223, 100]; // hell-gold
+                            }
+
+                            // 🥈 Silber für Platz 2
+                            if (data.row.index === 1) {
+                                data.cell.styles.fillColor = [220, 220, 220]; // hell-silber
+                            }
+
+                            // 🥉 Bronze für Platz 3
+                            if (data.row.index === 2) {
+                                data.cell.styles.fillColor = [205, 127, 50]; // hell-bronze
+                            }
+
+                            // ❌ Rot für 0 Punkte
+                            if (student.total_points === 0) {
+                                data.cell.styles.fillColor = [255, 102, 102]; // hellrot
+                            }
+                        }
+                    }
                 });
+
 
                 pos = doc.lastAutoTable.finalY + 10;
                 if (idx !== allKeys.length - 1) {
@@ -199,7 +247,11 @@ export default function ExportPopup({ onClose }) {
                     s.vorname,
                     s.nachname,
                     s.total_points,
-                    ...sportHeaders.map(sport => s.resultDetails?.[sport] ?? "")
+                    ...sportHeaders.map(sport => {
+                        const value = s.resultDetails?.[sport];
+                        const unit = sportUnitMap[sport] || "";
+                        return value !== undefined && value !== null ? `${value} ${unit}` : "";
+                    })
                 ]);
 
                 const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
