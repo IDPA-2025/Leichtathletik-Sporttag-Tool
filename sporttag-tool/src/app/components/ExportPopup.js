@@ -94,6 +94,7 @@ export default function ExportPopup({ onClose }) {
 
             setRanglisten(listen);
             window.exportTitles = titles;
+            window.sportHeaders = Array.from(allSports);
             setStep(2);
         } catch (err) {
             console.error("Fehler beim Generieren:", err);
