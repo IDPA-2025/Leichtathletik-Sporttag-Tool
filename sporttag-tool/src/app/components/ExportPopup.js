@@ -48,12 +48,20 @@ export default function ExportPopup({ onClose }) {
                 listen[key] = list
                     .map((s) => ({
                         ...s,
-                        vorname: s.vorname || s.name?.split(" ")[0] || "",
-                        nachname: s.nachname || s.name?.split(" ")[1] || "",
-                        total_points: s.total_points || s.punkte || 0,
+                        vorname: s.vorname,
+                        nachname: s.nachname,
+                        total_points: s.total_points || 0,
                         resultDetails: resultsMap[s.id] || {},
                     }))
                     .sort((a, b) => b.total_points - a.total_points);
+            }
+
+            // console log all sports from reultsMap r.sport
+            const allSports = new Set();
+            for (const studentId in resultsMap) {
+                for (const sport in resultsMap[studentId]) {
+                    allSports.add(sport);
+                }
             }
 
             if (mode === "preset") {
@@ -125,12 +133,13 @@ export default function ExportPopup({ onClose }) {
                 doc.setFont("helvetica", "normal");
                 pos += 6;
 
-                const headers = ["Rang", "Vorname", "Nachname", "Totale Punkte", ...sportHeaders];
+                const headers = ["Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte", ...sportHeaders];
 
                 const body = list.map((s, i) => [
                     i + 1,
                     s.vorname,
                     s.nachname,
+                    s.klasse,
                     s.total_points,
                     ...sportHeaders.map(sport => s.resultDetails?.[sport] ?? "")
                 ]);
