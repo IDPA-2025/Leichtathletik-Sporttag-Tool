@@ -168,6 +168,13 @@ export default function GroupResults() {
         }));
     };
 
+    const handleCheckboxChange = (studentId, checked) => {
+        setSkippedStudents(prev => ({
+            ...prev,
+            [studentId]: checked,
+        }));
+    };
+
     const getBestResult = (studentId) => {
         if (!scores[studentId] || !Array.isArray(scores[studentId])) return 0;
         if (!results[studentId] || !Array.isArray(results[studentId])) return 0;
@@ -202,17 +209,32 @@ export default function GroupResults() {
 
                 let pointData;
 
-                // Zeitdisziplin: kleinere Zeit besser (z.B. 12.34s)
-                if (sportConfig.time_measure === false) {
+
+                if (sportConfig.time_measure === true) {
+                    // Zeitmessung: kleinere Leistung besser (z.B. 12.34s)
                     const response = await supabase
                         .from("points_table")
                         .select("punkte")
                         .eq("geschlecht", geschlecht)
                         .eq("sport_code", sportCode)
-                        .gte("leistung", bestResult) // 👈 langsamer oder gleich
-                        .order("leistung", { ascending: false }) // nächstgrößerer Zeitwert zuerst
+                        .gte("leistung", bestResult) // Nächstes höheres Ergebnis
+                        .order("leistung", { ascending: true }) // Aufsteigend sortieren
                         .limit(1);
+
                     pointData = response.data;
+
+                    // Wenn kein Punktwert gefunden wurde, suche nach dem nächsthöheren Punktwert
+                    if (!pointData || pointData.length === 0) {
+                        const fallbackResponse = await supabase
+                            .from("points_table")
+                            .select("punkte")
+                            .eq("geschlecht", geschlecht)
+                            .eq("sport_code", sportCode)
+                            .gt("leistung", bestResult) // Nächstes höheres Ergebnis
+                            .order("leistung", { ascending: true })
+                            .limit(1);
+                        pointData = fallbackResponse.data;
+                    }
                 } else {
                     // Wurf/Sprung: größere Leistung besser (z.B. 6.20m)
                     const response = await supabase
@@ -220,13 +242,33 @@ export default function GroupResults() {
                         .select("punkte")
                         .eq("geschlecht", geschlecht)
                         .eq("sport_code", sportCode)
-                        .gte("leistung", bestResult)
-                        .order("leistung", { ascending: true }) // niedrigste Leistung ≥ best_result
+                        .lte("leistung", bestResult) // Nächstes niedrigeres Ergebnis
+                        .order("leistung", { ascending: false }) // Absteigend sortieren
                         .limit(1);
+
                     pointData = response.data;
+
+                    // Wenn kein Punktwert gefunden wurde, suche nach dem nächstniedrigeren Punktwert
+                    if (!pointData || pointData.length === 0) {
+                        const fallbackResponse = await supabase
+                            .from("points_table")
+                            .select("punkte")
+                            .eq("geschlecht", geschlecht)
+                            .eq("sport_code", sportCode)
+                            .lt("leistung", bestResult) // Nächstes niedrigeres Ergebnis
+                            .order("leistung", { ascending: false })
+                            .limit(1);
+                        pointData = fallbackResponse.data;
+                    }
                 }
 
+                if (bestResult === 0) {
+                    pointData = [{ punkte: 0 }];
+                }
+
+
                 const punkte = pointData && pointData.length > 0 ? pointData[0].punkte : null;
+
 
                 const update = {
                     student_id: student.id,
@@ -309,6 +351,8 @@ export default function GroupResults() {
             </div>
         ));
     };
+
+
     useEffect(() => {
         if (showScale) fetchScale();
     }, [showScale, sport, group]);
@@ -366,11 +410,11 @@ export default function GroupResults() {
                     {filteredStudents.map(student => (
                         <div
                             key={student.id}
-                            className={`bg-white shadow-md p-4 rounded-xl border border-gray-300 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition-all duration-300 ease-in-out ${
+                            className={` bg-white shadow-md p-4 rounded-xl border border-gray-300 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition-all duration-300 ease-in-out ${
                                 skippedStudents[student.id] ? 'opacity-50 line-through' : ''
                             }`}
                         >
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:justify-start gap-2 sm:gap-6 mb-2 transition-all duration-300 ease-in-out">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between sm:justify-center gap-2 sm:gap-6 mb-2 transition-all duration-300 ease-in-out ">
                                 <p className="text-lg font-semibold text-gray-900 whitespace-nowrap transition-all duration-300">
                                     {student.vorname} {student.nachname}
                                 </p>
@@ -381,7 +425,7 @@ export default function GroupResults() {
                                         onChange={(e) => handleCheckboxChange(student.id, e.target.checked)}
                                         className="accent-red-500 scale-110 transition-all duration-300"
                                     />
-                                    <span className="hidden sm:inline">Nicht teilgenommen</span>
+                                    <span className="">Nicht teilgenommen</span>
                                 </label>
                             </div>
 
