@@ -285,6 +285,12 @@ export default function GroupResults() {
 
 
 
+    const [hasLoaded, setHasLoaded] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setHasLoaded(true), 50); // kurzes Delay für visuelles Gefühl
+        return () => clearTimeout(timer);
+    }, []);
 
 
 
@@ -311,18 +317,20 @@ export default function GroupResults() {
                 />
 
                 <div className="flex-grow overflow-y-auto flex flex-col gap-4">
-                    {filteredStudents.map(student => (
+                    {filteredStudents.map((student, index) => (
+
                         <div
                             key={student.id}
-                            className={` bg-white shadow-md p-4 rounded-xl border border-gray-300 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition-all duration-300 ease-in-out ${
-                                skippedStudents[student.id] ? 'opacity-50 line-through' : ''
-                            }`}
+                            className={`bg-white shadow-md p-4 rounded-xl border border-gray-300 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition-all duration-500 ease-out transform
+    ${hasLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+    ${skippedStudents[student.id] ? "opacity-50 line-through" : ""}
+  `}
+                            style={{transitionDelay: `${index * 60}ms`}}
                         >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between sm:justify-center gap-2 sm:gap-6 mb-2 transition-all duration-300 ease-in-out ">
-                                <p className="text-lg font-semibold text-gray-900 whitespace-nowrap transition-all duration-300">
-                                    {student.vorname} {student.nachname}
-                                </p>
-                                <label className="flex items-center gap-2 text-sm text-gray-500 transition-all duration-300 ease-in-out">
+                            <div
+                                className="flex flex-col sm:flex-row sm:items-center justify-between sm:justify-center gap-2 sm:gap-6 mb-2 transition-all duration-300 ease-in-out ">
+                                <label
+                                    className="flex items-center gap-2 text-sm text-gray-500 transition-all duration-300 ease-in-out">
                                     <input
                                         type="checkbox"
                                         checked={!!skippedStudents[student.id]}
@@ -331,9 +339,13 @@ export default function GroupResults() {
                                     />
                                     <span className="">Nicht teilgenommen</span>
                                 </label>
+                                <p className="text-lg font-semibold text-gray-900 whitespace-nowrap transition-all duration-300 ease-in-out w-[20dvw]">
+                                    {student.vorname} {student.nachname}
+                                </p>
+
                             </div>
 
-                            <div className="flex flex-wrap gap-4 justify-center text-gray-900">
+                            <div className="flex flex-wrap  gap-4 justify-center text-gray-900 ">
                                 {sportConfig.checkFails === true ? renderInputFields(student, "height") : renderInputFields(student, "score")}
                             </div>
                         </div>
