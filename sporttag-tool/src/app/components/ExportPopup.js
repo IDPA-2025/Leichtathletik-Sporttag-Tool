@@ -31,13 +31,19 @@ export default function ExportPopup({ onClose }) {
 
             const { data: results, error: resultsError } = await supabase
                 .from("results")
-                .select("student_id, sport, best_result");
+                .select("student_id, sport, best_result, skipped");
             if (resultsError) throw resultsError;
 
             const { data: sports, error: sportsError } = await supabase
                 .from("sports")
                 .select("code, name, mesure_unit_short");
             if (sportsError) throw sportsError;
+
+            const resultsMap = {};
+            for (const r of results) {
+                if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
+                resultsMap[r.student_id][r.sport] = r.best_result?.value ?? r.best_result;
+            }
 
             const sportUnitMap = {};
             for (const s of sports) {
@@ -48,15 +54,11 @@ export default function ExportPopup({ onClose }) {
             for (const s of sports) {
                 sportNameMap[s.code] = s.name;
             }
-            window.sportNameMap = sportNameMap;
 
 
 
-            const resultsMap = {};
-            for (const r of results) {
-                if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
-                resultsMap[r.student_id][r.sport] = r.best_result?.value ?? r.best_result;
-            }
+
+
 
             const rankings = json.rankings;
             const titles = {};
@@ -115,6 +117,7 @@ export default function ExportPopup({ onClose }) {
             window.exportTitles = titles;
             window.sportHeaders = Array.from(allSports);
             window.sportUnitMap = sportUnitMap;
+            window.sportNameMap = sportNameMap;
 
 
             setStep(2);
@@ -235,9 +238,15 @@ export default function ExportPopup({ onClose }) {
                         i + 1,
                         s.vorname,
                         s.nachname,
+                        s.klasse,
                         s.total_points,
-                        ...sportHeaders.map(sport => s.resultDetails?.[sport] ?? "")
+                        ...sportHeaders.map(sport => {
+                            const value = s.resultDetails?.[sport];
+                            const unit = sportUnitMap[sport] || "";
+                            return value !== undefined && value !== null ? `${value} ${unit}` : "";
+                        })
                     ];
+
                     csv += row.join(",") + "\n";
                 });
             });
@@ -269,6 +278,7 @@ export default function ExportPopup({ onClose }) {
                         return value !== undefined && value !== null ? `${value} ${unit}` : "";
                     })
                 ]);
+
 
                 const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
                 XLSX.utils.book_append_sheet(wb, sheet, key.substring(0, 31));

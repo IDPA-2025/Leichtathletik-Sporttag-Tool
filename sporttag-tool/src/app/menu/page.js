@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Upload, PieChart } from "lucide-react";
+import BackButton from "@/app/components/BackButton";
+
 
 export default function Menu() {
   const [role, setRole] = useState(null);
@@ -50,7 +52,10 @@ export default function Menu() {
                 </p>
               </div>
             </Link>
+            <BackButton/>
+
           </div>
+
         </div>
       </div>
   );
