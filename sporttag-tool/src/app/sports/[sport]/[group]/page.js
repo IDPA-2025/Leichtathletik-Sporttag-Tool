@@ -23,7 +23,7 @@ export default function GroupResults() {
     const [skippedStudents, setSkippedStudents] = useState({});
     const [saved, setSaved] = useState(false); // NEU
     const [sportConfig, setSportConfig] = useState({
-        attempts: 3,
+        attempts: 4,
         unit: '',
         checkFails: false,
     });
@@ -176,23 +176,28 @@ export default function GroupResults() {
     };
 
     const getBestResult = (studentId) => {
-        if (!scores[studentId] || !Array.isArray(scores[studentId])) return 0;
-        if (!results[studentId] || !Array.isArray(results[studentId])) return 0;
-        if (!attemptHeights[studentId] || !Array.isArray(attemptHeights[studentId])) return 0;
+        const s = scores[studentId] || [];
+        const h = attemptHeights[studentId] || [];
+        const r = results[studentId] || [];
 
-        if (sportConfig.time_measure === false) {
-            const heightResults = attemptHeights[studentId].map((height, index) =>
-                results[studentId][index] === true ? parseFloat(height) || 0 : 0
+        if (!Array.isArray(s) || !Array.isArray(h) || !Array.isArray(r)) return 0;
+
+        if (sportConfig.time_measure === false && sportConfig.checkFails === true) {
+            const heightResults = h.map((val, i) =>
+                r[i] === true ? parseFloat(val) || 0 : 0
             );
             return Math.max(...heightResults);
-        } else if (sportConfig.checkFails === true)  {
-            const numericScores = scores[studentId].map(score => parseFloat(score) || 0);
-            return Math.min(...numericScores.filter(score => score > 0)) || 0;
-        } else {
-            const numericScores = scores[studentId].map(score => parseFloat(score) || 0);
-            return Math.max(...numericScores) || 0;
         }
+
+        if (sportConfig.time_measure === true) {
+            const numeric = s.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+            return numeric.length > 0 ? Math.min(...numeric) : 0;
+        }
+
+        const numeric = s.map(v => parseFloat(v)).filter(v => !isNaN(v));
+        return numeric.length > 0 ? Math.max(...numeric) : 0;
     };
+
 
     const saveResults = async () => {
         setSaved(false);
@@ -263,7 +268,7 @@ export default function GroupResults() {
                 }
 
                 if (bestResult === 0) {
-                    pointData = [{ punkte: 0 }];
+                    pointData = [{ punkte: null }];
                 }
 
 
@@ -274,14 +279,19 @@ export default function GroupResults() {
                     student_id: student.id,
                     sport: sport,
                     group: group,
-                    // heights: sport.toLowerCase() === "hoch" ? attemptHeights[student.id] : null,
-                    heights: sportConfig.checkFails === true ? attemptHeights[student.id] : null,
-                    attempt_results: sportConfig.checkFails === true ? results[student.id] : null,
-                    scores: sportConfig.checkFails === true ? scores[student.id] : null,
+
+                    // Nur speichern, wenn Höhen verwendet werden (z. B. Hochsprung)
+                    heights: sportConfig.checkFails ? attemptHeights[student.id] : null,
+                    attempt_results: sportConfig.checkFails ? results[student.id] : null,
+
+                    // Immer speichern, wenn keine Höhen verwendet werden (z. B. Sprint, Weitsprung)
+                    scores: !sportConfig.checkFails ? scores[student.id] : null,
+
                     best_result: isSkipped ? null : bestResult,
                     points: isSkipped ? null : punkte,
                     skipped: isSkipped,
                 };
+
 
                 // Insert oder Update
                 const { data: existingData } = await supabase
@@ -316,7 +326,9 @@ export default function GroupResults() {
 
     const renderInputFields = (student, type) => {
         const numAttempts = sportConfig.attempts || 3; // Standardwert auf 3 setzen, falls attempts nicht definiert ist
-        const values = type === "height" ? attemptHeights[student.id] : scores[student.id];
+        const values = type === "height"
+            ? attemptHeights[student.id] || []
+            : scores[student.id] || [];
 
         return Array.from({ length: numAttempts }, (_, index) => (
             <div key={index} className="flex items-center gap-2">
@@ -357,12 +369,19 @@ export default function GroupResults() {
         if (showScale) fetchScale();
     }, [showScale, sport, group]);
 
-    useEffect(() => {
-        fetchStudents();
-    }, [group, sport]);
+
 
     useEffect(() => {
-        fetchSportConfig();
+        if (sportConfig.attempts) {
+            fetchStudents();
+        }
+    }, [sportConfig]);
+
+    useEffect(() => {
+        const load = async () => {
+            await fetchSportConfig();
+        };
+        load();
     }, [sport]);
 
     useEffect(() => {
