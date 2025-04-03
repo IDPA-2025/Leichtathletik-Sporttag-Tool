@@ -31,53 +31,55 @@ export default function GroupResults() {
     const fetchScale = async () => {
         const geschlecht = group.split("-")[1];
 
-        const { data, error } = await supabase
-            .from("points_table")
-            .select("leistung, punkte")
-            .eq("sport_code", sport)
-            .eq("geschlecht", geschlecht)
-            .order("leistung", { ascending: false });
+        const response = await fetch(`/api/points?sport=${sport}&geschlecht=${geschlecht}`);
+        const json = await response.json();
 
-        if (!error) setPointsData(data);
-    };
-
-    const fetchStudents = async () => {
-        const [className, geschlecht] = group.split("-");
-
-        const { data, error } = await supabase
-            .from("students")
-            .select("id, vorname, nachname")
-            .eq("klasse", className)
-            .eq("geschlecht", geschlecht);
-
-        if (error) {
-            console.error("Fehler beim Laden der Schüler:", error);
+        if (!response.ok) {
+            console.error("Fehler beim Laden der Punktetabelle:", json.error);
             return;
         }
 
-        const numAttempts = sportConfig.attempts || 3;
-        setStudents(data);             // ALLE Schüler setzen, inkl. skipped = true
-        setFilteredStudents(data);    // Auch die Suche arbeitet mit allen
-        const initialSkipped = {};
-        data.forEach(student => {
-            initialSkipped[student.id] = student.skipped || false;
-        });
-        setSkippedStudents(initialSkipped);
+        setPointsData(json.data);
+    };
 
-        const initialAttemptHeights = {};
-        const initialResults = {};
-        const initialScores = {};
-        data.forEach(student => {
-            initialAttemptHeights[student.id] = Array(numAttempts).fill("");
-            initialResults[student.id] = Array(numAttempts).fill(null);
-            initialScores[student.id] = Array(numAttempts).fill("");
-        });
 
-        setAttemptHeights(initialAttemptHeights);
-        setResults(initialResults);
-        setScores(initialScores);
+    const fetchStudents = async () => {
+        try {
+            const response = await fetch(`/api/students?gruppe=${group}`);
+            const json = await response.json();
 
-        fetchExistingResults(data.map(s => s.id));
+            if (!response.ok) {
+                console.error("Fehler beim Laden der Schüler:", json.error);
+                return;
+            }
+
+            const data = json.data;
+            const numAttempts = sportConfig.attempts || 3;
+
+            setStudents(data);
+            setFilteredStudents(data);
+
+            const initialSkipped = {};
+            const initialAttemptHeights = {};
+            const initialResults = {};
+            const initialScores = {};
+
+            data.forEach(student => {
+                initialSkipped[student.id] = false;
+                initialAttemptHeights[student.id] = Array(numAttempts).fill("");
+                initialResults[student.id] = Array(numAttempts).fill(null);
+                initialScores[student.id] = Array(numAttempts).fill("");
+            });
+
+            setSkippedStudents(initialSkipped);
+            setAttemptHeights(initialAttemptHeights);
+            setResults(initialResults);
+            setScores(initialScores);
+
+            fetchExistingResults(data.map(s => s.id));
+        } catch (err) {
+            console.error("Fehler bei fetchStudents:", err);
+        }
     };
 
     const fetchSportConfig = async () => {
@@ -175,152 +177,38 @@ export default function GroupResults() {
         }));
     };
 
-    const getBestResult = (studentId) => {
-        const s = scores[studentId] || [];
-        const h = attemptHeights[studentId] || [];
-        const r = results[studentId] || [];
-
-        if (!Array.isArray(s) || !Array.isArray(h) || !Array.isArray(r)) return 0;
-
-        if (sportConfig.time_measure === false && sportConfig.checkFails === true) {
-            const heightResults = h.map((val, i) =>
-                r[i] === true ? parseFloat(val) || 0 : 0
-            );
-            return Math.max(...heightResults);
-        }
-
-        if (sportConfig.time_measure === true) {
-            const numeric = s.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
-            return numeric.length > 0 ? Math.min(...numeric) : 0;
-        }
-
-        const numeric = s.map(v => parseFloat(v)).filter(v => !isNaN(v));
-        return numeric.length > 0 ? Math.max(...numeric) : 0;
-    };
-
 
     const saveResults = async () => {
         setSaved(false);
         setIsSaving(true);
 
         try {
+            const response = await fetch("/api/results", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    students,
+                    sport,
+                    group,
+                    skippedStudents,
+                    attemptHeights,
+                    results,
+                    scores,
+                    sportConfig
+                })
+            });
 
-            for (const student of students) {
-                const isSkipped = !!skippedStudents[student.id];
-                const bestResult = getBestResult(student.id);
-                const geschlecht = group.split("-")[1];
-                const sportCode = sport;
-
-
-                let pointData;
-
-
-                if (sportConfig.time_measure === true) {
-                    // Zeitmessung: kleinere Leistung besser (z.B. 12.34s)
-                    const response = await supabase
-                        .from("points_table")
-                        .select("punkte")
-                        .eq("geschlecht", geschlecht)
-                        .eq("sport_code", sportCode)
-                        .gte("leistung", bestResult) // Nächstes höheres Ergebnis
-                        .order("leistung", { ascending: true }) // Aufsteigend sortieren
-                        .limit(1);
-
-                    pointData = response.data;
-
-                    // Wenn kein Punktwert gefunden wurde, suche nach dem nächsthöheren Punktwert
-                    if (!pointData || pointData.length === 0) {
-                        const fallbackResponse = await supabase
-                            .from("points_table")
-                            .select("punkte")
-                            .eq("geschlecht", geschlecht)
-                            .eq("sport_code", sportCode)
-                            .gt("leistung", bestResult) // Nächstes höheres Ergebnis
-                            .order("leistung", { ascending: true })
-                            .limit(1);
-                        pointData = fallbackResponse.data;
-                    }
-                } else {
-                    // Wurf/Sprung: größere Leistung besser (z.B. 6.20m)
-                    const response = await supabase
-                        .from("points_table")
-                        .select("punkte")
-                        .eq("geschlecht", geschlecht)
-                        .eq("sport_code", sportCode)
-                        .lte("leistung", bestResult) // Nächstes niedrigeres Ergebnis
-                        .order("leistung", { ascending: false }) // Absteigend sortieren
-                        .limit(1);
-
-                    pointData = response.data;
-
-                    // Wenn kein Punktwert gefunden wurde, suche nach dem nächstniedrigeren Punktwert
-                    if (!pointData || pointData.length === 0) {
-                        const fallbackResponse = await supabase
-                            .from("points_table")
-                            .select("punkte")
-                            .eq("geschlecht", geschlecht)
-                            .eq("sport_code", sportCode)
-                            .lt("leistung", bestResult) // Nächstes niedrigeres Ergebnis
-                            .order("leistung", { ascending: false })
-                            .limit(1);
-                        pointData = fallbackResponse.data;
-                    }
-                }
-
-                if (bestResult === 0) {
-                    pointData = [{ punkte: null }];
-                }
-
-
-                const punkte = pointData && pointData.length > 0 ? pointData[0].punkte : null;
-
-
-                const update = {
-                    student_id: student.id,
-                    sport: sport,
-                    group: group,
-
-                    // Nur speichern, wenn Höhen verwendet werden (z. B. Hochsprung)
-                    heights: sportConfig.checkFails ? attemptHeights[student.id] : null,
-                    attempt_results: sportConfig.checkFails ? results[student.id] : null,
-
-                    // Immer speichern, wenn keine Höhen verwendet werden (z. B. Sprint, Weitsprung)
-                    scores: !sportConfig.checkFails ? scores[student.id] : null,
-
-                    best_result: isSkipped ? null : bestResult,
-                    points: isSkipped ? null : punkte,
-                    skipped: isSkipped,
-                };
-
-
-                // Insert oder Update
-                const { data: existingData } = await supabase
-                    .from("results")
-                    .select("*")
-                    .eq("student_id", update.student_id)
-                    .eq("sport", sport)
-                    .maybeSingle();
-
-                if (existingData) {
-                    const { error } = await supabase
-                        .from("results")
-                        .update(update)
-                        .eq("id", existingData.id);
-                    if (error) throw error;
-                } else {
-                    const { error } = await supabase.from("results").insert(update);
-                    if (error) throw error;
-                }
-            }
+            if (!response.ok) throw new Error("Fehler beim Speichern");
 
             setSaved(true);
-
         } catch (error) {
-            console.error("Fehler beim Speichern:", error);
+            console.error("Speicherfehler:", error);
             setSaveMessage("Fehler beim Speichern der Ergebnisse.");
         } finally {
             setIsSaving(false);
-            setTimeout(() => setSaved(false), 2500); // Icon nach 2.5s wieder weg
+            setTimeout(() => setSaved(false), 2500);
         }
     };
 
@@ -364,12 +252,9 @@ export default function GroupResults() {
         ));
     };
 
-
     useEffect(() => {
         if (showScale) fetchScale();
     }, [showScale, sport, group]);
-
-
 
     useEffect(() => {
         if (sportConfig.attempts) {
