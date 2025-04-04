@@ -191,123 +191,135 @@ export default function UploadPage() {
 
   return (
       <div className="wrapper-container">
-        <div className="transparent-container text-center flex flex-col items-center relative">
+        <div className="transparent-container-upload text-center items-center relative gap-8">
 
-          {/* Titel */}
-          <h2 className="mid-title">Klassenliste hochladen</h2>
-
-          {/* Upload */}
-          <div className="border-2 border-dashed border-blue-500 w-full max-w-2xl h-32 flex flex-col items-center justify-center rounded-lg p-4 mb-6">
-            <Upload size={32} className="text-blue-600" />
-            <p className="text-gray-700 text-sm">Drag & Drop Klassenliste hier</p>
-            <label className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-blue-600">
-              Datei suchen
-              <input type="file" className="hidden" onChange={handleFileUpload} />
-            </label>
-          </div>
-
-          {/* Schülerliste */}
-          <div className="xl:w-1/2 bg-white shadow-md rounded-lg p-4 max-h-[500px] overflow-y-auto w-full">
-            <table className="hidden md:table w-full text-center border-collapse">
-              <thead>
-              <tr className="border-b border-gray-300">
-                <th className="p-2 text-gray-700">Name</th>
-                <th className="p-2 text-gray-700">Geschlecht</th>
-                <th className="p-2 text-gray-700">Klasse</th>
-                <th className="p-2 text-gray-700">Helfer</th>
-                <th className="p-2 text-gray-700">Abwesend</th>
-              </tr>
-              </thead>
-              <tbody>
-              {students.map((student, index) => (
-                  <tr key={index} className="border-b border-gray-200 text-black">
-                    <td className="p-2">{`${student.nachname}, ${student.vorname}`}</td>
-                    <td className="p-2">{student.geschlecht}</td>
-                    <td className="p-2">{student.klasse}</td>
-                    <td className="p-2">
-                      <button
-                          className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`}
-                          onClick={() => toggleHelper(index)}
-                          disabled={absentees.includes(index)}
-                      >
-                        Helfer
-                      </button>
-                    </td>
-                    <td className="p-2 flex justify-center">
-                      <button
-                          className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
-                          onClick={() => toggleAbsentee(index)}
-                      />
-                    </td>
-                  </tr>
-              ))}
-              </tbody>
-            </table>
-
-            {/* Mobile */}
-            <div className="md:hidden flex flex-col gap-4">
-              {students.map((student, index) => (
-                  <div key={index} className="border border-gray-300 rounded-lg p-3 shadow-sm">
-                    <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>
-                      {student.vorname} {student.nachname}
-                    </p>
-                    <p className="text-gray-600">Klasse: {student.klasse} | Geschlecht: {student.geschlecht}</p>
-                    <div className="flex justify-between mt-2 items-center">
-                      <button
-                          className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`}
-                          onClick={() => toggleHelper(index)}
-                          disabled={absentees.includes(index)}
-                      >
-                        Helfer
-                      </button>
-                      <button
-                          className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
-                          onClick={() => toggleAbsentee(index)}
-                      />
-                    </div>
-                  </div>
-              ))}
+          {/* Klassenliste */}
+          <div className="w-full lg:w-[30%]  lg:static flex flex-col items-center gap-4  p-[2%] content-between h-full ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300 ">
+            <div className="w-full  mt-6 md:mt-0  md:left-0 md:top-1/2 bg-white bg-opacity-80 shadow-md rounded-lg p-4   max-h-[400px] overflow-y-auto z-10">
+              <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center md:text-left">Schon hochgeladene Klassen:</h3>
+              <ul className="space-y-2">
+                {classes.map((cls) => (
+                    <li key={cls}
+                        className="flex justify-between items-center text-sm text-gray-800 bg-gray-100 rounded px-2 py-1">
+                      <span>{cls}</span>
+                      <div className="flex space-x-1">
+                        <button
+                            onClick={() => handleEditClass(cls)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Klasse bearbeiten"
+                        >
+                          📝
+                        </button>
+                        <button
+                            onClick={() => handleDeleteClassDirect(cls)}
+                            className="text-red-600 hover:text-red-800 font-bold"
+                            title={`Lösche Klasse ${cls}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </li>
+                ))}
+              </ul>
+            </div>
+            {/*date select*/}
+            <div className="w-[50%] aspect-square bg-black">
+                oijawoöfe
             </div>
           </div>
 
-          {/* Speicher-Button */}
-          <button
-              onClick={handleSubmit}
-              className={`mt-4 text-white px-6 py-3 rounded-lg shadow-md transition-all ${
-                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-              }`}
-              disabled={loading}
-          >
-            {loading ? "Speichert..." : "Speichern"}
-          </button>
+          <div className="w-full flex-1 flex flex-col items-center gap-6 p-[2%] h-full ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300">
+            {/* Titel */}
+            <h2 className="mid-title">Klassenliste hochladen</h2>
 
-          {/* Klassenliste */}
-          <div className="w-full md:w-[15dvw] mt-6 md:mt-0 md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2 md:ml-6 bg-white bg-opacity-80 shadow-md rounded-lg p-4 max-h-[400px] overflow-y-auto z-10">
-            <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center md:text-left">Klassen</h3>
-            <ul className="space-y-2">
-              {classes.map((cls) => (
-                  <li key={cls} className="flex justify-between items-center text-sm text-gray-800 bg-gray-100 rounded px-2 py-1">
-                    <span>{cls}</span>
-                    <div className="flex space-x-1">
-                      <button
-                          onClick={() => handleEditClass(cls)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Klasse bearbeiten"
-                      >
-                        📝
-                      </button>
-                      <button
-                          onClick={() => handleDeleteClassDirect(cls)}
-                          className="text-red-600 hover:text-red-800 font-bold"
-                          title={`Lösche Klasse ${cls}`}
-                      >
-                        ✕
-                      </button>
+            {/* Upload */}
+            <div
+                className="border-2 border-dashed border-blue-500 w-full max-w-2xl h-32 flex flex-col items-center justify-center rounded-lg p-4 mb-6">
+              <Upload size={32} className="text-blue-600"/>
+              <p className="text-gray-700 text-sm">Drag & Drop Klassenliste hier</p>
+              <label className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-blue-600">
+                Datei suchen
+                <input type="file" className="hidden" onChange={handleFileUpload}/>
+              </label>
+            </div>
+
+            {/* Schülerliste */}
+            <div className="bg-white shadow-md rounded-lg p-4 max-h-[30dvh] overflow-y-auto w-full">
+              <table className="hidden md:table w-full text-center border-collapse">
+                <thead>
+                <tr className="border-b border-gray-300">
+                  <th className="p-2 text-gray-700">Name</th>
+                  <th className="p-2 text-gray-700">Geschlecht</th>
+                  <th className="p-2 text-gray-700">Klasse</th>
+                  <th className="p-2 text-gray-700">Helfer</th>
+                  <th className="p-2 text-gray-700">Abwesend</th>
+                </tr>
+                </thead>
+                <tbody>
+                {students.map((student, index) => (
+                    <tr key={index} className="border-b border-gray-200 text-black">
+                      <td className="p-2">{`${student.nachname}, ${student.vorname}`}</td>
+                      <td className="p-2">{student.geschlecht}</td>
+                      <td className="p-2">{student.klasse}</td>
+                      <td className="p-2">
+                        <button
+                            className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`}
+                            onClick={() => toggleHelper(index)}
+                            disabled={absentees.includes(index)}
+                        >
+                          Helfer
+                        </button>
+                      </td>
+                      <td className="p-2 flex justify-center">
+                        <button
+                            className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
+                            onClick={() => toggleAbsentee(index)}
+                        />
+                      </td>
+                    </tr>
+                ))}
+                </tbody>
+              </table>
+
+              {/* Mobile */}
+              <div className="md:hidden flex flex-col gap-4">
+                {students.map((student, index) => (
+                    <div key={index} className="border border-gray-300 rounded-lg p-3 shadow-sm">
+                      <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>
+                        {student.vorname} {student.nachname}
+                      </p>
+                      <p className="text-gray-600">Klasse: {student.klasse} | Geschlecht: {student.geschlecht}</p>
+                      <div className="flex justify-between mt-2 items-center">
+                        <button
+                            className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`}
+                            onClick={() => toggleHelper(index)}
+                            disabled={absentees.includes(index)}
+                        >
+                          Helfer
+                        </button>
+                        <button
+                            className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
+                            onClick={() => toggleAbsentee(index)}
+                        />
+                      </div>
                     </div>
-                  </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+            </div>
+
+            {/* Speicher-Button */}
+            <button
+                onClick={handleSubmit}
+                className={`mt-4 text-white px-6 py-3 rounded-lg shadow-md transition-all ${
+                    loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                }`}
+                disabled={loading}
+            >
+              {loading ? "Speichert..." : "Speichern"}
+            </button>
+
           </div>
+
         </div>
       </div>
   );
