@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Upload } from "lucide-react";
+import {CheckCircle, Loader2, Upload} from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import BackButton from "@/app/components/BackButton";
 
 export default function UploadPage() {
   const [file, setFile] = useState(null);
@@ -11,6 +12,7 @@ export default function UploadPage() {
   const [absentees, setAbsentees] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
+    const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -31,6 +33,14 @@ export default function UploadPage() {
 
     fetchClasses();
   }, []);
+
+  useEffect(() => {
+    if (saved) {
+      const timeout = setTimeout(() => setSaved(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [saved]);
+
 
   function berechneAlterskategorie(geburtsdatum) {
     const veranstaltungsDatum = new Date("2025-06-01");
@@ -135,10 +145,15 @@ export default function UploadPage() {
       alert(`Fehler beim Hochladen: ${error.message}`);
     } else {
       alert("Erfolgreich gespeichert!");
-      location.reload();
+
+      // Aktualisiere die Klassenliste
+      const uploadedClasses = [...new Set(updatedStudents.map(s => s.klasse))];
+      setClasses(prevClasses => [...new Set([...prevClasses, ...uploadedClasses])]);
+
+      // Setze die Schülerliste zurück
+      setStudents([]);
     }
   };
-
   const handleDeleteClassDirect = async (cls) => {
     const confirmDelete = window.confirm(`Möchtest du wirklich alle Schüler der Klasse ${cls} löschen?`);
     if (!confirmDelete) return;
@@ -194,7 +209,7 @@ export default function UploadPage() {
         <div className="transparent-container-upload text-center items-center relative gap-8">
 
           {/* Klassenliste */}
-          <div className="w-full lg:w-[30%]  lg:static flex flex-col items-center gap-4  p-[2%] content-between h-full ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300 ">
+          <div className="w-full lg:w-[30%]  lg:static flex flex-col items-center gap-4  p-[2%] content-between h-full ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300  ">
             <div className="w-full  mt-6 md:mt-0  md:left-0 md:top-1/2 bg-white bg-opacity-80 shadow-md rounded-lg p-4   max-h-[400px] overflow-y-auto z-10">
               <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center md:text-left">Schon hochgeladene Klassen:</h3>
               <ul className="space-y-2">
@@ -310,17 +325,29 @@ export default function UploadPage() {
             {/* Speicher-Button */}
             <button
                 onClick={handleSubmit}
-                className={`mt-4 text-white px-6 py-3 rounded-lg shadow-md transition-all ${
+                className={`mt-4 button transition-all ${
                     loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
                 }`}
                 disabled={loading}
             >
-              {loading ? "Speichert..." : "Speichern"}
-            </button>
+              {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Speichern...</span>
+                  </>
+              ) : (
+                  <>
+                    <span>Speichern</span>
+                  </>
+              )}            </button>
+
+
 
           </div>
 
         </div>
+        <BackButton/>
+
       </div>
   );
 }

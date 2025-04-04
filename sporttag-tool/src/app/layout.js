@@ -1,13 +1,18 @@
+// app/layout.js
 import "./globals.css";
-import BackButton from "@/app/components/BackButton";
+import ClientLayout from "./client-layout";
+
+export const metadata = {
+    title: "Sporttag App",
+    description: "Tool für Resultate",
+};
 
 export default function RootLayout({ children }) {
-  return (
-    <html lang="de">
-      <body>
-      {children}
-      <BackButton/>
-      </body>
-    </html>
-  );
+    return (
+        <html lang="de">
+        <body>
+            {children}
+        </body>
+        </html>
+    );
 }
