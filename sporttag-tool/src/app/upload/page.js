@@ -34,17 +34,32 @@ export default function UploadPage() {
     fetchClasses();
   }, []);
 
-  function berechneAlterskategorie(geburtsdatum) {
-    const veranstaltungsDatum = new Date("2025-06-01");
-    const geburtsdatumDate = new Date(geburtsdatum);
-    const diffInJahren = veranstaltungsDatum.getFullYear() - geburtsdatumDate.getFullYear();
-    const adjust = veranstaltungsDatum < new Date(geburtsdatumDate.setFullYear(veranstaltungsDatum.getFullYear()));
-    const alter = adjust ? diffInJahren - 1 : diffInJahren;
+// function berechneAlterskategorie(geburtsdatum) {
+//   const veranstaltungsDatum = new Date("2025-06-01");
+//   const geburtsdatumDate = new Date(geburtsdatum);
+//   const diffInJahren = veranstaltungsDatum.getFullYear() - geburtsdatumDate.getFullYear();
+//   const adjust = veranstaltungsDatum < new Date(geburtsdatumDate.setFullYear(veranstaltungsDatum.getFullYear()));
+//   const alter = adjust ? diffInJahren - 1 : diffInJahren;
 
-    if (alter < 16) return "-15";
-    if (alter >= 16 && alter <= 17) return "16-17";
-    return "18+";
-  }
+//   if (alter < 16) return "-15";
+//   if (alter >= 16 && alter <= 17) return "16-17";
+//   return "18+";
+// }
+
+  const updateAgeCategories = async () => {
+    const response = await fetch("/api/students/recalculate-age", {
+      method: "POST"
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      alert("Fehler beim Aktualisieren der Alterskategorien: " + result.error);
+    } else {
+      console.log(`Alterskategorien aktualisiert: ${result.updated} Schüler`);
+    }
+  };
+
+
 
   const detectSeparator = (text) => text.includes(";") ? ";" : ",";
 
@@ -134,6 +149,30 @@ export default function UploadPage() {
       alert(`Fehler beim Hochladen: ${error.message}`);
     } else {
       alert("Erfolgreich gespeichert!");
+      location.reload(); // ❗️ Hier wird neu geladen – dadurch wird updateAgeCategories nie aufgerufen
+    }
+  };
+
+
+    setLoading(true);
+
+    const updatedStudents = students.map((student, index) => ({
+      ...student,
+      helfer: helpers.includes(index),
+      anwesend: !absentees.includes(index),
+    }));
+
+    const { error } = await supabase
+        .from("students")
+        .upsert(updatedStudents, { onConflict: ["id"] });
+
+    setLoading(false);
+
+    if (error) {
+      console.error("Fehler beim Hochladen:", error);
+      alert(`Fehler beim Hochladen: ${error.message}`);
+    } else {
+      alert("Erfolgreich gespeichert!");
       location.reload();
     }
   };
@@ -191,7 +230,7 @@ export default function UploadPage() {
   return (
       <div className="wrapper-container">
         <div className="transparent-container-upload flex flex-col lg:flex-row gap-6">
-          <div className="basis-0 grow w-full lg:max-w-[260px] flex md:flex-wrap items-center gap-4">
+          <div className="basis-0 grow w-full lg:max-w-[260px] flex flex-col sm:flex-row lg:flex-col items-center gap-4">
             <div className="w-full bg-white bg-opacity-80 shadow-md rounded-lg p-4 max-h-[400px] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center">Schon hochgeladene Klassen:</h3>
               <ul className="space-y-2">

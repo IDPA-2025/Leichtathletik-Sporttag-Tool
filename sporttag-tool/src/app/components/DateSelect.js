@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useRef} from 'react';
 
 const DateSelect = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [isOpen, setIsOpen] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const calendarRef = useRef(null);
+    const buttonRef = useRef(null);
 
     // Formatiere den Monatsnamen und Jahr für die Anzeige
     const formatMonthYear = (date) => {
@@ -96,6 +98,25 @@ const DateSelect = () => {
         }
     }, []);
 
+    // Schließe das Popup beim Klick außerhalb
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (
+                calendarRef.current &&
+                !calendarRef.current.contains(event.target) &&
+                buttonRef.current &&
+                !buttonRef.current.contains(event.target)
+            ) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
     // Überprüfe ob ein Datum dem ausgewählten Datum entspricht
     const isSelectedDate = (date) => {
         return selectedDate &&
@@ -113,8 +134,9 @@ const DateSelect = () => {
     };
 
     return (
-        <div className="w-full max-w-md mx-auto text-gray-900">
+        <div className="w-full max-w-md mx-auto text-gray-900 relative">
             <div className="bg-white rounded-lg p-8 shadow-lg flex flex-col items-center">
+                <p>Datum des Sporttages</p>
                 {/* Großes Datum Anzeige */}
                 <div className="text-center mb-8">
                     <div className="text-8xl font-bold">
@@ -127,36 +149,27 @@ const DateSelect = () => {
                     </div>
                 </div>
 
-                {/* Button zum Öffnen des Kalenders */}
+                {/* Button zum Öffnen */}
                 <button
+                    ref={buttonRef}
                     onClick={() => setIsOpen(!isOpen)}
                     className="button cursor-pointer"
                 >
                     Datum
                 </button>
 
-                {/* Custom Kalender Dropdown */}
+                {/* Popup direkt unter dem Button */}
                 {isOpen && (
-                    <div className="absolute left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50 w-80">
-                        {/* Monat und Jahr mit Pfeilen */}
+                    <div
+                        ref={calendarRef}
+                        className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50 w-80"
+                    >
+                        {/* Monat & Navigation */}
                         <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center">
-                                <div className="font-bold">{formatMonthYear(currentMonth)}</div>
-                                <button className="ml-1 text-gray-500">▼</button>
-                            </div>
-                            <div className="flex">
-                                <button
-                                    onClick={prevMonth}
-                                    className="px-2"
-                                >
-                                    ↑
-                                </button>
-                                <button
-                                    onClick={nextMonth}
-                                    className="px-2"
-                                >
-                                    ↓
-                                </button>
+                            <div className="font-bold">{formatMonthYear(currentMonth)}</div>
+                            <div className="flex gap-2">
+                                <button onClick={prevMonth}>←</button>
+                                <button onClick={nextMonth}>→</button>
                             </div>
                         </div>
 
@@ -186,7 +199,7 @@ const DateSelect = () => {
                             ))}
                         </div>
 
-                        {/* Löschen und Heute Buttons */}
+                        {/* Footer */}
                         <div className="flex justify-between mt-4">
                             <button
                                 onClick={handleClear}
