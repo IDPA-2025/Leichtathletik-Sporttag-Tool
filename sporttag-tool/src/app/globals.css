@@ -63,7 +63,7 @@
 
 
   .big-title{
-    @apply text-5xl font-extralight text-gray-900 mb-12 tracking-wide
+    @apply text-3xl lg:text-5xl font-extralight text-gray-900 mb-12 tracking-wide
   }
 
   .mid-title{

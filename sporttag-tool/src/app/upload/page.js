@@ -251,7 +251,7 @@ export default function UploadPage() {
           </div>
 
           <div className="basis-0 grow w-full flex flex-col items-center gap-6">
-            <h2 className="mid-title">Klassenliste hochladen</h2>
+            <h2 className="mid-title">Dashboard</h2>
 
             <div
                 onDragEnter={handleDrag}

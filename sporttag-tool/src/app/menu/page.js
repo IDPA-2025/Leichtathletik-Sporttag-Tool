@@ -36,7 +36,7 @@ export default function Menu() {
                       <Upload size={40} className="text-blue-600" />
                     </div>
                     <p className="mt-4 text-lg text-gray-700 font-medium text-center">
-                      Klassenliste <br /> hochladen
+                      Dashboard
                     </p>
                   </div>
                 </Link>
