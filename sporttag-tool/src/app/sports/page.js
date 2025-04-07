@@ -40,13 +40,22 @@ export default function SportsOverview() {
 
                                     {/* Bild */}
                                     <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 flex items-center justify-center">
-                                        <Image
-                                            src={PlaceholderImage}
-                                            className="rounded-lg"
-                                            width={150}
-                                            height={150}
-                                            alt={sport.name}
-                                        />
+                                    {
+                                sport.svg_url ? (
+                                    <img
+                                    src={sport.svg_url}
+                                    alt={sport.name}
+                                    className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-contain"
+                                    />
+                                ) : (
+                                    <Image
+                                    src={PlaceholderImage}
+                                    alt={sport.name}
+                                    width={150}
+                                    height={150}
+                                    />
+                                )
+                                }
                                     </div>
 
                                     {/* Name Disziplin */}
