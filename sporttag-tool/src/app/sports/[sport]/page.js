@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabaseClient"
+import BackButton from "@/app/components/BackButton";
 
 export default function GroupOverview() {
     const { sport } = useParams()
@@ -83,6 +84,8 @@ export default function GroupOverview() {
                 </div>
 
             </div>
+            <BackButton/>
+
         </div>
     )
 }

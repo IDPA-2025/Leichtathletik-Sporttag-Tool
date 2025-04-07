@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
-import { Loader2, CheckCircle } from "lucide-react"; // Icon oben im File importieren
+import { Loader2, CheckCircle } from "lucide-react";
+import BackButton from "@/app/components/BackButton"; // Icon oben im File importieren
 
 
 export default function GroupResults() {
@@ -417,6 +418,8 @@ export default function GroupResults() {
                     </div>
                 </div>
             )}
+            <BackButton/>
+
         </div>
     );
 }

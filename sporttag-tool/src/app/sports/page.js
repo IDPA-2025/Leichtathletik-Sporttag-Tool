@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../lib/supabaseClient"
 import Image from "next/image"
 import PlaceholderImage from "../../../public/placeholder.png"
+import BackButton from "@/app/components/BackButton";
 
 export default function SportsOverview() {
     const [sports, setSports] = useState([])
@@ -57,6 +58,8 @@ export default function SportsOverview() {
                 </div>
 
             </div>
+            <BackButton/>
+
         </div>
     )
 }
