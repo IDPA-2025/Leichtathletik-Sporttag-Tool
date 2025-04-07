@@ -222,26 +222,12 @@ export default function ExportPopup({ onClose }) {
         setMessage("");
 
         try {
-            const res = await fetch("/api/rankings");
+            const res = await fetch("/api/rankings/with-details");
             const json = await res.json();
 
-            if (!res.ok || !json.rankings) throw new Error(json.error || "Fehler beim Laden der Rankings");
+            if (!res.ok || !json.rankings) throw new Error(json.error || "Fehler beim Laden der Daten");
 
-            const { data: results, error: resultsError } = await supabase
-                .from("results")
-                .select("student_id, sport, best_result, skipped");
-            if (resultsError) throw resultsError;
-
-            const { data: sports, error: sportsError } = await supabase
-                .from("sports")
-                .select("code, name, mesure_unit_short");
-            if (sportsError) throw sportsError;
-
-            // Fetch student details including grade
-            const { data: studentDetails, error: studentError } = await supabase
-                .from("students")
-                .select("id, vorname, nachname, klasse, total_points, grade");
-            if (studentError) throw studentError;
+            const { rankings, results, sports, students: studentDetails } = json;
 
             // Create a map of student details for quick lookup
             const studentMap = {};
@@ -265,7 +251,6 @@ export default function ExportPopup({ onClose }) {
                 sportNameMap[s.code] = s.name;
             }
 
-            const rankings = json.rankings;
             const titles = {};
             let listen = {};
 
