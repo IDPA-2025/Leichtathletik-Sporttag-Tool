@@ -14,6 +14,27 @@ export default function UploadPage() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload({ target: { files: e.dataTransfer.files } });
+    }
+  };
+
 
   const fetchClasses = async () => {
     try {
@@ -233,14 +254,22 @@ export default function UploadPage() {
           <div className="basis-0 grow w-full flex flex-col items-center gap-6">
             <h2 className="mid-title">Klassenliste hochladen</h2>
 
-            <div className="border-2 border-dashed border-blue-500 w-full max-w-2xl h-32 flex flex-col items-center justify-center rounded-lg p-4">
-              <Upload size={32} className="text-blue-600" />
+            <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed w-full max-w-2xl h-32 flex flex-col items-center justify-center rounded-lg p-4 transition-all duration-200
+    ${dragActive ? "border-blue-700 bg-blue-50" : "border-blue-500"}`}
+            >
+              <Upload size={32} className="text-blue-600"/>
               <p className="text-gray-700 text-sm">Drag & Drop Klassenliste hier</p>
               <label className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-blue-600">
                 Datei suchen
-                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload}/>
               </label>
             </div>
+
 
             <div className="bg-white shadow-md rounded-lg p-4 max-h-[30dvh] overflow-y-auto w-full">
               <table className="hidden md:table w-full text-center border-collapse">
@@ -293,6 +322,8 @@ export default function UploadPage() {
             </button>
           </div>
         </div>
+        <BackButton/>
+
       </div>
   );
 }
