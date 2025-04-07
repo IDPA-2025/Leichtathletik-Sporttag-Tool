@@ -2,7 +2,6 @@
 
 import {useEffect, useRef, useState} from "react";
 import { Upload } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
 import BackButton from "@/app/components/BackButton";
 import DateSelect from "@/app/components/DateSelect";
 
@@ -19,11 +18,7 @@ export default function UploadPage() {
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    setDragActive(e.type === "dragenter" || e.type === "dragover");
   };
 
   const handleDrop = (e) => {
@@ -35,43 +30,20 @@ export default function UploadPage() {
     }
   };
 
-
   const fetchClasses = async () => {
     try {
       const response = await fetch("/api/students/classes");
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unbekannter Fehler");
-
       setClasses(result.classes);
     } catch (err) {
       console.error("Fehler beim Laden der Klassen:", err.message);
     }
   };
+
   useEffect(() => {
     fetchClasses();
   }, []);
-
-  const triggerRecalculation = async () => {
-    const response = await fetch("/api/students/recalculate-age", {
-      method: "POST",
-    });
-
-    let result;
-    try {
-      result = await response.json();
-    } catch (err) {
-      console.error("Fehler beim Parsen der Antwort:", err);
-      return;
-    }
-
-    if (!response.ok) {
-      console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
-    } else {
-      console.log(`Alterskategorien aktualisiert: ${result.updated} Schüler`);
-    }
-  };
-
-
 
   const detectSeparator = (text) => text.includes(";") ? ";" : ",";
 
@@ -149,68 +121,95 @@ export default function UploadPage() {
       anwesend: !absentees.includes(index),
     }));
 
-    const { error } = await supabase
-        .from("students")
-        .upsert(updatedStudents, { onConflict: ["id"] });
+    try {
+      const res = await fetch("/api/students/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedStudents),
+      });
 
-    await triggerRecalculation();
+      const result = await res.json();
 
-    if (error) {
+      if (!res.ok) throw new Error(result.error || "Fehler beim Speichern");
+
+      await fetchClasses();
+      alert("Erfolgreich gespeichert!");
+      setStudents([]);
+      setHelpers([]);
+      setAbsentees([]);
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (error) {
       console.error("Fehler beim Hochladen:", error);
-      alert(`Fehler beim Hochladen: ${error.message}`);
+      alert("Fehler beim Hochladen: " + error.message);
+    } finally {
       setLoading(false);
-      return;
     }
 
-    // Neue Klassen in den State einfügen
-    const neueKlassen = [...new Set(students.map(s => s.klasse))];
-    const neueEinträge = neueKlassen.filter(k => !classes.includes(k));
-    setClasses(prev => [...prev, ...neueEinträge]);
+    const response = await fetch("/api/students/recalculate-age", { method: "POST" });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
+    } else {
+      console.log("Alterskategorien erfolgreich neu berechnet");
+    }
 
-    // Alles zurücksetzen (inkl. File Input Reset, falls vorhanden)
-    setStudents([]);
-    setHelpers([]);
-    setAbsentees([]);
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-
-    // Jetzt erst alert, danach loading auf false
-    alert("Erfolgreich gespeichert!");
-    setLoading(false);
   };
 
   const handleDeleteClassDirect = async (cls) => {
     const confirmDelete = window.confirm(`Möchtest du wirklich alle Schüler der Klasse ${cls} löschen?`);
     if (!confirmDelete) return;
 
-    const { error } = await supabase.from("students").delete().eq("klasse", cls);
+    try {
+      const response = await fetch("/api/students/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ klasse: cls }),
+      });
 
-    if (error) {
-      console.error("Fehler beim Löschen der Klasse:", error);
-    } else {
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Fehler beim Löschen:", result.error);
+        alert("Fehler: " + result.error);
+        return;
+      }
+
       alert(`Alle Schüler der Klasse ${cls} wurden gelöscht.`);
       setClasses(classes.filter((c) => c !== cls));
+    } catch (err) {
+      console.error("Fehler beim Löschen der Klasse:", err);
     }
   };
+
 
   const handleEditClass = async (cls) => {
-    const { data, error } = await supabase.from("students").select("*").eq("klasse", cls);
+    try {
+      const response = await fetch(`/api/students/by-class?klasse=${cls}`);
+      const json = await response.json();
 
-    if (error) {
+      if (!response.ok || !json.data) {
+        throw new Error(json.error || "Fehler beim Laden der Daten");
+      }
+
+      const data = json.data;
+
+      if (!data.length) {
+        alert(`Keine Schüler in Klasse ${cls} gefunden.`);
+        return;
+      }
+
+      setStudents(data);
+      setHelpers(data.map((s, i) => s.helfer ? i : null).filter(i => i !== null));
+      setAbsentees(data.map((s, i) => !s.anwesend ? i : null).filter(i => i !== null));
+    } catch (error) {
       console.error("Fehler beim Laden der Klasse:", error);
       alert(`Fehler beim Laden: ${error.message}`);
-      return;
     }
-
-    if (!data || data.length === 0) {
-      alert(`Keine Schüler in Klasse ${cls} gefunden.`);
-      return;
-    }
-
-    setStudents(data);
-    setHelpers(data.map((s, i) => s.helfer ? i : null).filter(i => i !== null));
-    setAbsentees(data.map((s, i) => !s.anwesend ? i : null).filter(i => i !== null));
   };
+
 
   const toggleHelper = (index) => {
     if (!absentees.includes(index)) {
@@ -260,7 +259,7 @@ export default function UploadPage() {
                 onDragLeave={handleDrag}
                 onDrop={handleDrop}
                 className={`border-2 border-dashed w-full max-w-2xl h-32 flex flex-col items-center justify-center rounded-lg p-4 transition-all duration-200
-    ${dragActive ? "border-blue-700 bg-blue-50" : "border-blue-500"}`}
+                  ${dragActive ? "border-blue-700 bg-blue-50" : "border-blue-500"}`}
             >
               <Upload size={32} className="text-blue-600"/>
               <p className="text-gray-700 text-sm">Drag & Drop Klassenliste hier</p>
@@ -325,5 +324,4 @@ export default function UploadPage() {
         <BackButton/>
 
       </div>
-  );
-}
+  );}
