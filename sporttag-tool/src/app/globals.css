@@ -26,7 +26,7 @@
   }
   .transparent-container {
     @apply bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[90dvw]
-    flex flex-col min-h-[90dvh] sm:h-auto box-border;
+    flex flex-col min-h-[90dvh] sm:h-auto   box-border;
   }
 
   .animate-slide-up {
