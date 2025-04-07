@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef} from 'react';
 
 const DateSelect = () => {
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(null); // initial null
     const [isOpen, setIsOpen] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const calendarRef = useRef(null);
@@ -15,6 +15,23 @@ const DateSelect = () => {
         ];
         return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
     };
+
+    const saveDateToDatabase = async (date) => {
+        const response = await fetch("/api/sportday/update-date", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            console.error("Fehler beim Speichern des Datums:", result.error);
+        } else {
+            console.log("Datum erfolgreich gespeichert:", result);
+        }
+    };
+
+
 
     // Generiere Kalenderdaten für aktuellen Monat
     const generateCalendarDays = () => {
@@ -74,16 +91,41 @@ const DateSelect = () => {
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
     };
 
-    const handleDateClick = (date) => {
+    const handleDateClick = async (date) => {
         setSelectedDate(date);
         setIsOpen(false);
+
+        // Speichere Datum in DB
+        await saveDateToDatabase(date.toLocaleDateString("sv-SE")); // yyyy-mm-dd Format
+
+        // Triggere Alterskategorien-Neuberechnung
+        const response = await fetch("/api/students/recalculate-age", { method: "POST" });
+        if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
+        } else {
+            console.log("Alterskategorien erfolgreich neu berechnet");
+        }
     };
 
-    const handleToday = () => {
+
+    const handleToday = async () => {
         const today = new Date();
         setSelectedDate(today);
         setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
         setIsOpen(false);
+
+        // Datum speichern
+        await saveDateToDatabase(today.toLocaleDateString("sv-SE"));
+
+        // Alterskategorien neu berechnen
+        const response = await fetch("/api/students/recalculate-age", { method: "POST" });
+        if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
+        } else {
+            console.log("Alterskategorien erfolgreich neu berechnet");
+        }
     };
 
     const handleClear = () => {
@@ -111,11 +153,31 @@ const DateSelect = () => {
             }
         };
 
+
+
         document.addEventListener("mousedown", handleClickOutside);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
+
+    useEffect(() => {
+        const fetchDate = async () => {
+            const response = await fetch("/api/sportday/get-date");
+            console.log("Response:", response);
+            const result = await response.json();
+            if (response.ok && result.date) {
+                const loadedDate = new Date(result.date);
+                setSelectedDate(loadedDate);
+                setCurrentMonth(new Date(loadedDate.getFullYear(), loadedDate.getMonth(), 1));
+            } else {
+                console.warn("Kein gültiges Datum geladen:", result.error || result);
+            }
+        };
+
+        fetchDate();
+    }, []);
+
 
     // Überprüfe ob ein Datum dem ausgewählten Datum entspricht
     const isSelectedDate = (date) => {

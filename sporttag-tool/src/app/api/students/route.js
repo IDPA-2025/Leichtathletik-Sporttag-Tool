@@ -12,7 +12,7 @@ export async function GET(req) {
 
     const { data, error } = await supabase
         .from("students")
-        .select("id, vorname, nachname")
+        .select("id, vorname, nachname, geburtsdatum")
         .eq("klasse", klasse)
         .eq("geschlecht", geschlecht);
 

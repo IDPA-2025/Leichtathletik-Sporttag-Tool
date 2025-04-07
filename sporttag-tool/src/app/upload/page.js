@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import { Upload } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import BackButton from "@/app/components/BackButton";
@@ -13,47 +13,38 @@ export default function UploadPage() {
   const [absentees, setAbsentees] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
+  const fetchClasses = async () => {
+    try {
+      const response = await fetch("/api/students/classes");
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unbekannter Fehler");
+
+      setClasses(result.classes);
+    } catch (err) {
+      console.error("Fehler beim Laden der Klassen:", err.message);
+    }
+  };
   useEffect(() => {
-    const fetchClasses = async () => {
-      const { data, error } = await supabase
-          .from("students")
-          .select("klasse")
-          .not("klasse", "is", null)
-          .order("klasse", { ascending: true });
-
-      if (error) {
-        console.error("Fehler beim Laden der Klassen:", error.message);
-        return;
-      }
-
-      const uniqueClasses = [...new Set(data.map(student => student.klasse))];
-      setClasses(uniqueClasses);
-    };
-
     fetchClasses();
   }, []);
 
-// function berechneAlterskategorie(geburtsdatum) {
-//   const veranstaltungsDatum = new Date("2025-06-01");
-//   const geburtsdatumDate = new Date(geburtsdatum);
-//   const diffInJahren = veranstaltungsDatum.getFullYear() - geburtsdatumDate.getFullYear();
-//   const adjust = veranstaltungsDatum < new Date(geburtsdatumDate.setFullYear(veranstaltungsDatum.getFullYear()));
-//   const alter = adjust ? diffInJahren - 1 : diffInJahren;
-
-//   if (alter < 16) return "-15";
-//   if (alter >= 16 && alter <= 17) return "16-17";
-//   return "18+";
-// }
-
-  const updateAgeCategories = async () => {
+  const triggerRecalculation = async () => {
     const response = await fetch("/api/students/recalculate-age", {
-      method: "POST"
+      method: "POST",
     });
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (err) {
+      console.error("Fehler beim Parsen der Antwort:", err);
+      return;
+    }
+
     if (!response.ok) {
-      alert("Fehler beim Aktualisieren der Alterskategorien: " + result.error);
+      console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
     } else {
       console.log(`Alterskategorien aktualisiert: ${result.updated} Schüler`);
     }
@@ -97,7 +88,6 @@ export default function UploadPage() {
           klasse: values[klasseIndex] || "",
           helfer: false,
           anwesend: true,
-          age_category: berechneAlterskategorie(geburtsdatum),
         };
       }).filter(student => student.nachname && student.vorname && student.klasse);
 
@@ -142,39 +132,30 @@ export default function UploadPage() {
         .from("students")
         .upsert(updatedStudents, { onConflict: ["id"] });
 
-    setLoading(false);
+    await triggerRecalculation();
 
     if (error) {
       console.error("Fehler beim Hochladen:", error);
       alert(`Fehler beim Hochladen: ${error.message}`);
-    } else {
-      alert("Erfolgreich gespeichert!");
-      location.reload(); // ❗️ Hier wird neu geladen – dadurch wird updateAgeCategories nie aufgerufen
+      setLoading(false);
+      return;
     }
-  };
 
+    // Neue Klassen in den State einfügen
+    const neueKlassen = [...new Set(students.map(s => s.klasse))];
+    const neueEinträge = neueKlassen.filter(k => !classes.includes(k));
+    setClasses(prev => [...prev, ...neueEinträge]);
 
-    setLoading(true);
+    // Alles zurücksetzen (inkl. File Input Reset, falls vorhanden)
+    setStudents([]);
+    setHelpers([]);
+    setAbsentees([]);
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
-    const updatedStudents = students.map((student, index) => ({
-      ...student,
-      helfer: helpers.includes(index),
-      anwesend: !absentees.includes(index),
-    }));
-
-    const { error } = await supabase
-        .from("students")
-        .upsert(updatedStudents, { onConflict: ["id"] });
-
+    // Jetzt erst alert, danach loading auf false
+    alert("Erfolgreich gespeichert!");
     setLoading(false);
-
-    if (error) {
-      console.error("Fehler beim Hochladen:", error);
-      alert(`Fehler beim Hochladen: ${error.message}`);
-    } else {
-      alert("Erfolgreich gespeichert!");
-      location.reload();
-    }
   };
 
   const handleDeleteClassDirect = async (cls) => {
@@ -257,7 +238,7 @@ export default function UploadPage() {
               <p className="text-gray-700 text-sm">Drag & Drop Klassenliste hier</p>
               <label className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-blue-600">
                 Datei suchen
-                <input type="file" className="hidden" onChange={handleFileUpload} />
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
               </label>
             </div>
 

@@ -1,10 +1,6 @@
 // File: /app/api/students/recalculate-age/route.js
+import { supabase } from "../../../lib/supabaseClient";
 
-import { supabase } from "@/app/lib/supabaseClient";
-
-/**
- * Berechnet Alterskategorie basierend auf Geburtsdatum und Event-Datum
- */
 function calculateAgeCategory(geburtsdatum, veranstaltungsDatumStr) {
     const veranstaltungsDatum = new Date(veranstaltungsDatumStr);
     const geburtsdatumDate = new Date(geburtsdatum);
@@ -18,34 +14,50 @@ function calculateAgeCategory(geburtsdatum, veranstaltungsDatumStr) {
 }
 
 export async function POST() {
-    // Hole das aktuelle Veranstaltungsdatum aus der Tabelle "sportday"
-    const { data: sportdayData, error: dateError } = await supabase
-        .from("sportdays")
-        .select("date")
-        .single();
+    try {
+        const { data: sportdayData, error: dateError } = await supabase
+            .from("sportdays")
+            .select("date")
+            .single();
 
-    if (dateError || !sportdayData?.date) {
-        return new Response(JSON.stringify({ error: "Veranstaltungsdatum konnte nicht geladen werden." }), { status: 500 });
+        if (dateError || !sportdayData?.date) {
+            console.error("Fehler beim Laden des Sporttag-Datums:", dateError);
+            return new Response(JSON.stringify({ error: "Veranstaltungsdatum konnte nicht geladen werden." }), { status: 500 });
+        }
+
+        const veranstaltungsDatum = sportdayData.date;
+
+        const { data: students, error: studentError } = await supabase
+            .from("students")
+            .select("id, geburtsdatum");
+
+        if (studentError) {
+            console.error("Fehler beim Laden der Schülerdaten:", studentError);
+            return new Response(JSON.stringify({ error: studentError.message }), { status: 500 });
+        }
+
+        const updates = students.map((student) => ({
+            id: student.id,
+            age_category: calculateAgeCategory(student.geburtsdatum, veranstaltungsDatum),
+        }));
+
+        // Performanter: ein einziger Aufruf mit upsert()
+        for (const update of updates) {
+            const { error: updateError } = await supabase
+                .from("students")
+                .update({ age_category: update.age_category })
+                .eq("id", update.id);
+
+            if (updateError) {
+                console.error(`Fehler beim Aktualisieren von ID ${update.id}:`, updateError);
+                return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
+            }
+        }
+
+
+        return new Response(JSON.stringify({ success: true, updated: updates.length }), { status: 200 });
+    } catch (err) {
+        console.error("Unerwarteter Fehler in recalculate-age:", err);
+        return new Response(JSON.stringify({ error: "Interner Fehler" }), { status: 500 });
     }
-
-    const veranstaltungsDatum = sportdayData.date;
-
-    const { data: students, error } = await supabase.from("students").select("id, geburtsdatum");
-
-    if (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-    }
-
-    const updates = students.map((student) => ({
-        id: student.id,
-        age_category: calculateAgeCategory(student.geburtsdatum, veranstaltungsDatum),
-    }));
-
-    const { error: updateError } = await supabase.from("students").upsert(updates, { onConflict: ["id"] });
-
-    if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
-    }
-
-    return new Response(JSON.stringify({ success: true, updated: updates.length }), { status: 200 });
 }
