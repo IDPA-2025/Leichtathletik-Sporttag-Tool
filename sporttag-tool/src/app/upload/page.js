@@ -191,10 +191,11 @@ export default function UploadPage() {
 
   return (
       <div className="wrapper-container">
-        <div className="transparent-container-upload text-center items-center relative gap-8">
+        <div className="transparent-container-upload text-center relative gap-8">
 
           {/* Klassenliste */}
-          <div className="w-full lg:w-[30%]  lg:static flex flex-col items-center gap-4  p-[2%] content-between h-full ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300 ">
+          {/*Div 1*/}
+          <div className="w-full max-w-xs lg:max-w-[250px] justify-around lg:static flex flex-col items-center gap-4  p-[2%] flex-1 ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300 ">
             <div className="w-full  mt-6 md:mt-0  md:left-0 md:top-1/2 bg-white bg-opacity-80 shadow-md rounded-lg p-4   max-h-[400px] overflow-y-auto z-10">
               <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center md:text-left">Schon hochgeladene Klassen:</h3>
               <ul className="space-y-2">
@@ -228,7 +229,8 @@ export default function UploadPage() {
             </div>
           </div>
 
-          <div className="w-full flex-1 flex flex-col items-center gap-6 p-[2%] h-full ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300">
+          {/*Div 2*/}
+          <div className="w-full flex-1 flex flex-col items-center gap-6 p-[2%] flex-1 ounded-full sm:rounded-xl  sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300">
             {/* Titel */}
             <h2 className="mid-title">Klassenliste hochladen</h2>
 
