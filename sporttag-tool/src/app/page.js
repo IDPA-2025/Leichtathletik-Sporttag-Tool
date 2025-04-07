@@ -10,9 +10,9 @@ export default function Home() {
   const [removeSplash, setRemoveSplash] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setLogoFadeOut(true), 1200); // Logo rausfaden
-    const t2 = setTimeout(() => setBgFadeOut(true), 1600);   // Hintergrund rausfaden
-    const t3 = setTimeout(() => setRemoveSplash(true), 2200); // Splash entfernen
+    const t1 = setTimeout(() => setLogoFadeOut(true), 1400); // Logo rausfaden
+    const t2 = setTimeout(() => setBgFadeOut(true), 1000);   // Hintergrund rausfaden
+    const t3 = setTimeout(() => setRemoveSplash(true), 1800); // Splash entfernen
 
     return () => {
       clearTimeout(t1);
