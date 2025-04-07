@@ -224,7 +224,7 @@ const DateSelect = () => {
                 {isOpen && (
                     <div
                         ref={calendarRef}
-                        className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50 w-80"
+                        className="lg:absolute relative top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50 w-80"
                     >
                         {/* Monat & Navigation */}
                         <div className="flex justify-between items-center mb-4">

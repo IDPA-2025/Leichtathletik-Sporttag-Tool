@@ -231,7 +231,7 @@ export default function UploadPage() {
 
   return (
       <div className="wrapper-container">
-        <div className="transparent-container-upload flex flex-col lg:flex-row gap-6">
+        <div className="transparent-container-upload gap-6 mb-15">
           <div className="basis-0 grow w-full lg:max-w-[260px] flex flex-col sm:flex-row lg:flex-col items-center gap-4">
             <div className="w-full bg-white bg-opacity-80 shadow-md rounded-lg p-4 max-h-[400px] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center">Schon hochgeladene Klassen:</h3>
@@ -271,7 +271,7 @@ export default function UploadPage() {
             </div>
 
 
-            <div className="bg-white shadow-md rounded-lg p-4 max-h-[30dvh] overflow-y-auto w-full">
+            <div className="bg-white shadow-md rounded-lg p-4 max-h-[50dvh] overflow-y-auto w-full">
               <table className="hidden md:table w-full text-center border-collapse">
                 <thead>
                 <tr className="border-b border-gray-300">
