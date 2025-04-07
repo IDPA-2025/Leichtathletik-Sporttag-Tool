@@ -22,7 +22,7 @@
   }
   .transparent-container-upload {
     @apply bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[90dvw]
-    flex lg:flex-row flex-col-reverse min-h-[90dvh]    box-border;
+    flex lg:flex-row flex-col-reverse min-h-[90dvh] box-border;
   }
   .transparent-container {
     @apply bg-white/50 backdrop-blur-md shadow-lg rounded-lg p-10 w-[90dvw]
@@ -58,7 +58,7 @@
 
 
   .wrapper-container {
-    @apply flex justify-center items-center text-center h-screen; /* Standard: Höhe flexibel */
+    @apply flex justify-center items-center text-center; /* Standard: Höhe flexibel */
   }
 
 
