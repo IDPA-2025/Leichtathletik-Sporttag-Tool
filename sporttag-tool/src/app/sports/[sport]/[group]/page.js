@@ -271,26 +271,27 @@ export default function GroupResults() {
     }, [sport]);
 
     useEffect(() => {
-        // Filter students: they must be present AND match the search query (if any)
+        // Filter students: they must be present AND not be a helper AND match the search query (if any)
         const updatedFilteredStudents = students.filter(student => {
-            // Condition 1: Student must be present (assuming 'anwesend' is a boolean field)
+            // Bedingung 1: Schüler muss anwesend sein
             const isPresent = student.anwesend === true;
 
-            // Condition 2: Student must match the search query, or there is no search query
+            // Bedingung 2: Schüler darf kein Helfer sein
+            const isNotHelper = !student.helfer; // oder student.helfer === false
+
+            // Bedingung 3: Schüler muss zur Suchanfrage passen, oder es gibt keine Suchanfrage
             const matchesSearch = !searchQuery ||
                 `${student.vorname} ${student.nachname}`
                     .toLowerCase()
                     .includes(searchQuery.toLowerCase());
 
-            // Return true only if both conditions are met
-            return isPresent && matchesSearch;
+            // Gib true zurück, wenn alle Bedingungen erfüllt sind
+            return isPresent && isNotHelper && matchesSearch;
         });
 
         setFilteredStudents(updatedFilteredStudents);
 
-    }, [searchQuery, students]); // Dependencies remain the same: re-filter when search or the main student list changes
-
-
+    }, [searchQuery, students]);
 
     const [hasLoaded, setHasLoaded] = useState(false);
 
