@@ -7,7 +7,6 @@ export async function GET() {
         const { data: students, error: studentError } = await supabase
             .from("students")
             .select("id, vorname, nachname, klasse, geburtsdatum, geschlecht, age_category, grade, anwesend, total_points, helfer")
-            .eq("anwesend", true);
 
         if (studentError) {
             throw new Error("Fehler beim Laden der Schüler: " + studentError.message);
@@ -57,7 +56,8 @@ export async function GET() {
             kategorie: s.age_category,
             total_points: punkteMap.get(s.id) || 0,
             grade: s.grade,
-            helfer: s.helfer
+            helfer: s.helfer,
+            anwesend: s.anwesend
         }));
 
         const gruppierteRanglisten = {};

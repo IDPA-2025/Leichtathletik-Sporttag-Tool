@@ -271,18 +271,24 @@ export default function GroupResults() {
     }, [sport]);
 
     useEffect(() => {
-        if (!searchQuery) {
-            setFilteredStudents(students);
-        } else {
-            setFilteredStudents(
-                students.filter(student =>
-                    `${student.vorname} ${student.nachname}`
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase())
-                )
-            );
-        }
-    }, [searchQuery, students]);
+        // Filter students: they must be present AND match the search query (if any)
+        const updatedFilteredStudents = students.filter(student => {
+            // Condition 1: Student must be present (assuming 'anwesend' is a boolean field)
+            const isPresent = student.anwesend === true;
+
+            // Condition 2: Student must match the search query, or there is no search query
+            const matchesSearch = !searchQuery ||
+                `${student.vorname} ${student.nachname}`
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase());
+
+            // Return true only if both conditions are met
+            return isPresent && matchesSearch;
+        });
+
+        setFilteredStudents(updatedFilteredStudents);
+
+    }, [searchQuery, students]); // Dependencies remain the same: re-filter when search or the main student list changes
 
 
 
