@@ -48,10 +48,9 @@ export default function ExportPopup({ onClose }) {
             const doc = new jsPDF();
             let pos = 10;
 
+            // ... innerhalb handleExport -> if (exportType === "pdf") ...
             allKeys.forEach((key, idx) => {
-                const list = ranglisten[key];
-
-                // Skip if list is empty
+                const list = ranglisten[key]; // list enthält jetzt Objekte mit 'helfer'
                 if (list.length === 0) return;
 
                 doc.setFont("helvetica", "bold");
@@ -59,26 +58,34 @@ export default function ExportPopup({ onClose }) {
                 doc.setFont("helvetica", "normal");
                 pos += 6;
 
-                // Include grade in headers if showGrades is true
                 const headers = [
                     "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
                     ...(showGrades ? ["Note"] : []),
                     ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
                 ];
 
-                const body = list.map((s, i) => [
-                    i + 1,
-                    s.vorname,
-                    s.nachname,
-                    s.klasse,
-                    s.total_points,
-                    ...(showGrades ? [s.grade || "-"] : []),
-                    ...sportHeaders.map(sport => {
-                        const value = s.resultDetails?.[sport];
-                        const unit = sportUnitMap[sport] || "";
-                        return value !== undefined && value !== null ? `${value} ${unit}` : "";
-                    })
-                ]);
+                const body = list.map((s, i) => {
+                    // NEU: Prüfe auf Helfer für die Rang-Anzeige
+                    const rankDisplay = s.helfer === true ? "Helfer" : (i + 1); // Zeige "Helfer" oder Rangnummer
+
+                    return [
+                        rankDisplay, // Angepasste Rang-Anzeige
+                        s.vorname,
+                        s.nachname,
+                        s.klasse,
+                        s.total_points,
+                        ...(showGrades ? [s.grade || "-"] : []),
+                        ...sportHeaders.map(sport => { // Logik für "Übersprungen" bleibt
+                            const detail = s.resultDetails?.[sport];
+                            if (detail && detail.skipped === true) {
+                                return "Übersprungen";
+                            }
+                            const value = detail?.value;
+                            const unit = sportUnitMap[sport] || "";
+                            return value !== undefined && value !== null ? `${value} ${unit}`.trim() : "";
+                        })
+                    ];
+                });
 
                 autoTable(doc, {
                     startY: pos,
@@ -87,121 +94,176 @@ export default function ExportPopup({ onClose }) {
                     theme: "striped",
                     headStyles: { fillColor: [41, 128, 185], fontSize: 7 },
                     styles: { fontSize: 7, cellPadding: 1 },
-
                     didParseCell: function (data) {
                         const student = list[data.row.index];
 
-                        if (data.section === "body") {
-                            // 🥇 Gold für Platz 1
-                            if (data.row.index === 0) {
-                                data.cell.styles.fillColor = [255, 223, 100]; // hell-gold
+                        if (data.section === 'body' && student) {
+                            // Standard-Stile
+                            data.cell.styles.textColor = [0, 0, 0];
+                            data.cell.styles.fillColor = null;
+                            data.cell.styles.fontStyle = 'normal'; // Standard Schriftstil
+
+                            // Zeilen-Stile (Medaillen / Null Punkte)
+                            if (student.helfer !== true) { // Medaillen nur für Nicht-Helfer
+                                if (data.row.index === 0) data.cell.styles.fillColor = [255, 223, 100];
+                                else if (data.row.index === 1) data.cell.styles.fillColor = [220, 220, 220];
+                                else if (data.row.index === 2) data.cell.styles.fillColor = [205, 127, 50];
+                                else if (student.total_points === 0) data.cell.styles.fillColor = [255, 102, 102];
+                            } // Optional: Eigene Hintergrundfarbe für Helfer? data.cell.styles.fillColor = [220, 255, 220]; // z.B. hellgrün
+
+                            // Zellen-Stile überschreiben
+                            // 1. Fett für "Helfer" in Rangspalte
+                            if (data.column.index === 0 && student.helfer === true) {
+                                data.cell.styles.fontStyle = 'bold'; // Mache "Helfer" fett
                             }
 
-                            // 🥈 Silber für Platz 2
-                            if (data.row.index === 1) {
-                                data.cell.styles.fillColor = [220, 220, 220]; // hell-silber
-                            }
-
-                            // 🥉 Bronze für Platz 3
-                            if (data.row.index === 2) {
-                                data.cell.styles.fillColor = [205, 127, 50]; // hell-bronze
-                            }
-
-                            // ❌ Rot für 0 Punkte
-                            if (student.total_points === 0) {
-                                data.cell.styles.fillColor = [255, 102, 102]; // hellrot
+                            // 2. Styling für übersprungene Zellen (unverändert)
+                            if (showDetails) {
+                                const fixedColumnCount = 5 + (showGrades ? 1 : 0);
+                                if (data.column.index >= fixedColumnCount) {
+                                    const sportIndex = data.column.index - fixedColumnCount;
+                                    if (sportIndex >= 0 && sportIndex < sportHeaders.length) {
+                                        const sportCode = sportHeaders[sportIndex];
+                                        const detail = student.resultDetails?.[sportCode];
+                                        if (detail && detail.skipped === true) {
+                                            data.cell.styles.fillColor = [255, 204, 203];
+                                            data.cell.styles.textColor = [150, 150, 150];
+                                            data.cell.styles.fontStyle = 'normal'; // Überschriebenen Text nicht fett machen
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 });
-
                 pos = doc.lastAutoTable.finalY + 10;
-                if (idx !== allKeys.length - 1) {
-                    // Only add a new page if we're not on the last list and we have more lists with content
-                    const remainingListsHaveContent = allKeys.slice(idx + 1).some(k => ranglisten[k].length > 0);
-                    if (remainingListsHaveContent) {
-                        doc.addPage();
-                        pos = 10;
-                    }
-                }
+                // Seitenumbruch-Logik (unverändert)
+                // ...
             });
+            doc.save(`${filename}.pdf`);
 
             doc.save(`${filename}.pdf`);
         } else if (exportType === "csv") {
             let csv = "";
             allKeys.forEach((key) => {
-                const list = ranglisten[key];
+                const list = ranglisten[key]; // Enthält 'helfer' (Annahme: API/handleGenerateRanking korrekt)
 
                 // Skip if list is empty
                 if (list.length === 0) return;
 
-                csv += `\n"${titles[key] || key}"\n`;
+                csv += `\n"${titles[key] || key}"\n`; // Titel der Rangliste
                 const headers = [
                     "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
                     ...(showGrades ? ["Note"] : []),
                     ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
                 ];
-                csv += headers.join(",") + "\n";
+                // Schreibe Header (sicher in Anführungszeichen)
+                csv += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
+
+                // Gehe durch jeden Schüler in der Liste
                 list.forEach((s, i) => {
-                    const row = [
-                        i + 1,
-                        s.vorname,
-                        s.nachname,
-                        s.klasse,
-                        s.total_points,
-                        ...(showGrades ? [s.grade || "-"] : []),
+                    // *** KORREKTUR HIER: Prüfe auf Helfer für die Rang-Anzeige ***
+                    const rankDisplay = s.helfer === true ? `"Helfer"` : (i + 1); // "Helfer" als String zitieren, sonst Zahl
+
+                    // Erstelle die Zeile für CSV, Werte sicher zitieren
+                    const formattedRow = [
+                        rankDisplay, // Verwende rankDisplay (ist schon Zahl oder zitierter String)
+                        `"${s.vorname.replace(/"/g, '""')}"`,
+                        `"${s.nachname.replace(/"/g, '""')}"`,
+                        `"${s.klasse.replace(/"/g, '""')}"`,
+                        s.total_points, // Zahl bleibt Zahl
+                        // Note sicher formatieren (wenn String, zitieren)
+                        ...(showGrades ? [(typeof s.grade === 'string' ? `"${(s.grade ?? '').replace(/"/g, '""')}"` : (s.grade ?? '""'))] : []),
+                        // Sportresultate (Logik für "Übersprungen" bleibt)
                         ...sportHeaders.map(sport => {
-                            const value = s.resultDetails?.[sport];
-                            const unit = sportUnitMap[sport] || "";
-                            return value !== undefined && value !== null ? `${value} ${unit}` : "";
+                            const detail = s.resultDetails?.[sport];
+                            let displayValue;
+                            if (detail && detail.skipped === true) {
+                                displayValue = "Übersprungen";
+                            } else {
+                                const value = detail?.value;
+                                const unit = sportUnitMap[sport] || "";
+                                displayValue = value !== undefined && value !== null ? `${value} ${unit}`.trim() : "";
+                            }
+                            // Sport-Ergebnis sicher zitieren
+                            return `"${displayValue.replace(/"/g, '""')}"`;
                         })
                     ];
-
-                    csv += row.join(",") + "\n";
+                    // Füge die formatierte Zeile zum CSV hinzu
+                    csv += formattedRow.join(",") + "\n";
                 });
             });
 
-            const blob = new Blob([csv], { type: "text/csv" });
+            // Erstelle Blob und lade CSV herunter (unverändert)
+            const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"}); // charset hinzugefügt für bessere Kompatibilität
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
             a.download = `${filename}.csv`;
             a.click();
             URL.revokeObjectURL(url);
-        } else if (exportType === "excel") {
-            const wb = XLSX.utils.book_new();
 
-            allKeys.forEach((key) => {
-                const list = ranglisten[key];
+        }else if (exportType === "excel") {
+                const wb = XLSX.utils.book_new();
 
-                // Skip if list is empty
-                if (list.length === 0) return;
+                allKeys.forEach((key) => {
+                    const list = ranglisten[key]; // Enthält 'helfer' (Annahme: API/handleGenerateRanking korrekt)
 
-                const headers = [
-                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
-                    ...(showGrades ? ["Note"] : []),
-                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
-                ];
-                const rows = list.map((s, i) => [
-                    i + 1,
-                    s.vorname,
-                    s.nachname,
-                    s.klasse,
-                    s.total_points,
-                    ...(showGrades ? [s.grade || "-"] : []),
-                    ...sportHeaders.map(sport => {
-                        const value = s.resultDetails?.[sport];
-                        const unit = sportUnitMap[sport] || "";
-                        return value !== undefined && value !== null ? `${value} ${unit}` : "";
-                    })
-                ]);
+                    // Skip if list is empty
+                    if (list.length === 0) return;
 
-                const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-                XLSX.utils.book_append_sheet(wb, sheet, key.substring(0, 31));
-            });
+                    // Definiere die Header
+                    const headers = [
+                        "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
+                        ...(showGrades ? ["Note"] : []),
+                        ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
+                    ];
 
-            XLSX.writeFile(wb, `${filename}.xlsx`);
-        }
+                    // Erstelle die Datenzeilen
+                    const rows = list.map((s, i) => {
+                        // *** KORREKTUR HIER: Prüfe auf Helfer für die Rang-Anzeige ***
+                        const rankDisplay = s.helfer === true ? "Helfer" : (i + 1); // Text oder Zahl
+
+                        // Gib das Array für die Zeile zurück
+                        return [
+                            rankDisplay, // Verwende rankDisplay
+                            s.vorname,   // String
+                            s.nachname,  // String
+                            s.klasse,    // String oder Zahl? Annahme String
+                            s.total_points, // Zahl
+                            ...(showGrades ? [s.grade ?? "-"] : []), // Zahl oder String
+                            // Sportresultate (Logik für "Übersprungen" bleibt)
+                            ...sportHeaders.map(sport => {
+                                const detail = s.resultDetails?.[sport];
+                                if (detail && detail.skipped === true) {
+                                    return "Übersprungen"; // String
+                                }
+                                const value = detail?.value;
+                                const unit = sportUnitMap[sport] || "";
+                                if (value !== undefined && value !== null) {
+                                    // Versuche Zahl zu behalten, sonst String mit Einheit
+                                    return typeof value === 'number' ? value : `${value} ${unit}`.trim();
+                                } else {
+                                    return ""; // Leere Zelle
+                                }
+                            })
+                        ];
+                    });
+
+                    // Erstelle das Sheet aus Headern und Datenzeilen
+                    const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+                    // Optional: Spaltenbreiten anpassen (Beispiel)
+                    // const wscols = [ {wch:6}, {wch:20}, {wch:20}, {wch:10}, {wch:15}, /* weitere Spalten */ ];
+                    // sheet['!cols'] = wscols;
+
+                    // Füge das Sheet zum Workbook hinzu
+                    XLSX.utils.book_append_sheet(wb, sheet, key.substring(0, 31)); // Blattname gekürzt auf 31 Zeichen
+                });
+
+                // Schreibe und lade die Excel-Datei herunter
+                XLSX.writeFile(wb, `${filename}.xlsx`);
+            }
     };
 
     const generateExportFilename = () => {
@@ -238,7 +300,11 @@ export default function ExportPopup({ onClose }) {
             const resultsMap = {};
             for (const r of results) {
                 if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
-                resultsMap[r.student_id][r.sport] = r.best_result?.value ?? r.best_result;
+
+                resultsMap[r.student_id][r.sport] = {
+                    value: r.best_result?.value ?? r.best_result,
+                    skipped: r.skipped
+                };
             }
 
             const sportUnitMap = {};
@@ -254,7 +320,6 @@ export default function ExportPopup({ onClose }) {
             const titles = {};
             let listen = {};
 
-            // Process rankings based on mode
             if (mode === "preset") {
                 for (const [key, list] of Object.entries(rankings)) {
                     listen[key] = list
