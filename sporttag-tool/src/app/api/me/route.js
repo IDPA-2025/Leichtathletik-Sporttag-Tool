@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken';
-
+import jwt from 'jsonwebtoken'
 export async function GET(req) {
     const cookie = req.headers.get("cookie") || "";
     const token = cookie
@@ -19,6 +18,7 @@ export async function GET(req) {
             role: decoded.role
         }), { status: 200 });
     } catch (err) {
+
         return new Response(JSON.stringify({ error: "Token ungültig" }), { status: 403 });
     }
 }

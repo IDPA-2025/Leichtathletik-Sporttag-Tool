@@ -12,11 +12,23 @@ export default function BackButton() {
 
     useEffect(() => {
         const fetchRole = async () => {
-            const res = await fetch("/api/me", { cache: "no-store" }); // wichtig!
-            const data = await res.json();
-            setRole(data.role ?? null);
+            try {
+                const res = await fetch("/api/me", { cache: "no-store" }); // WICHTIG!
+                if (!res.ok) {
+                    if (res.status === 403) {
+                        router.push("/login");
+                        return; // Wichtig, um die weitere Verarbeitung zu stoppen
+                    }
+                    // Andere Fehlerbehandlung, falls nötig
+                    setRole(null);
+                } else {
+                    const data = await res.json();
+                    setRole(data.role ?? null);
+                }
+            } catch {
+                setRole(null);
+            }
         };
-
         fetchRole();
     }, []);
 

@@ -48,9 +48,8 @@ export default function ExportPopup({ onClose }) {
             const doc = new jsPDF();
             let pos = 10;
 
-            // ... innerhalb handleExport -> if (exportType === "pdf") ...
             allKeys.forEach((key, idx) => {
-                const list = ranglisten[key]; // list enthält jetzt Objekte mit 'helfer'
+                const list = ranglisten[key];
                 if (list.length === 0) return;
 
                 doc.setFont("helvetica", "bold");
@@ -65,17 +64,17 @@ export default function ExportPopup({ onClose }) {
                 ];
 
                 const body = list.map((s, i) => {
-                    // NEU: Prüfe auf Helfer für die Rang-Anzeige
-                    const rankDisplay = s.helfer === true ? "Helfer" : (i + 1); // Zeige "Helfer" oder Rangnummer
+                    // KORREKTUR: Rang nur anzeigen, wenn kein Helfer
+                    let rankDisplay = s.rang || (s.helfer === true ? "Helfer" : (i + 1));
 
                     return [
-                        rankDisplay, // Angepasste Rang-Anzeige
+                        rankDisplay,
                         s.vorname,
                         s.nachname,
                         s.klasse,
                         s.total_points,
                         ...(showGrades ? [s.grade || "-"] : []),
-                        ...sportHeaders.map(sport => { // Logik für "Übersprungen" bleibt
+                        ...sportHeaders.map(sport => {
                             const detail = s.resultDetails?.[sport];
                             if (detail && detail.skipped === true) {
                                 return "Übersprungen";
@@ -98,26 +97,25 @@ export default function ExportPopup({ onClose }) {
                         const student = list[data.row.index];
 
                         if (data.section === 'body' && student) {
-                            // Standard-Stile
                             data.cell.styles.textColor = [0, 0, 0];
                             data.cell.styles.fillColor = null;
-                            data.cell.styles.fontStyle = 'normal'; // Standard Schriftstil
+                            data.cell.styles.fontStyle = 'normal';
 
-                            // Zeilen-Stile (Medaillen / Null Punkte)
-                            if (student.helfer !== true) { // Medaillen nur für Nicht-Helfer
+                            if (student.helfer !== true) {
                                 if (data.row.index === 0) data.cell.styles.fillColor = [255, 223, 100];
                                 else if (data.row.index === 1) data.cell.styles.fillColor = [220, 220, 220];
                                 else if (data.row.index === 2) data.cell.styles.fillColor = [205, 127, 50];
                                 else if (student.total_points === 0) data.cell.styles.fillColor = [255, 102, 102];
-                            } // Optional: Eigene Hintergrundfarbe für Helfer? data.cell.styles.fillColor = [220, 255, 220]; // z.B. hellgrün
 
-                            // Zellen-Stile überschreiben
-                            // 1. Fett für "Helfer" in Rangspalte
-                            if (data.column.index === 0 && student.helfer === true) {
-                                data.cell.styles.fontStyle = 'bold'; // Mache "Helfer" fett
+                            } else if (data.column.index === 0) {
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                            if (student.rang === "Abwesend") {
+                                data.cell.styles.fillColor = [240, 240, 240];
+                                data.cell.styles.fontStyle = 'bold';
                             }
 
-                            // 2. Styling für übersprungene Zellen (unverändert)
+
                             if (showDetails) {
                                 const fixedColumnCount = 5 + (showGrades ? 1 : 0);
                                 if (data.column.index >= fixedColumnCount) {
@@ -128,7 +126,7 @@ export default function ExportPopup({ onClose }) {
                                         if (detail && detail.skipped === true) {
                                             data.cell.styles.fillColor = [255, 204, 203];
                                             data.cell.styles.textColor = [150, 150, 150];
-                                            data.cell.styles.fontStyle = 'normal'; // Überschriebenen Text nicht fett machen
+                                            data.cell.styles.fontStyle = 'normal';
                                         }
                                     }
                                 }
@@ -137,44 +135,40 @@ export default function ExportPopup({ onClose }) {
                     }
                 });
                 pos = doc.lastAutoTable.finalY + 10;
-                // Seitenumbruch-Logik (unverändert)
-                // ...
+                // Seitenumbruch-Logik
+                if (idx < allKeys.length - 1) {
+                    doc.addPage();
+                    pos = 10;
+                }
             });
             doc.save(`${filename}.pdf`);
 
-            doc.save(`${filename}.pdf`);
         } else if (exportType === "csv") {
             let csv = "";
             allKeys.forEach((key) => {
-                const list = ranglisten[key]; // Enthält 'helfer' (Annahme: API/handleGenerateRanking korrekt)
+                const list = ranglisten[key];
 
-                // Skip if list is empty
                 if (list.length === 0) return;
 
-                csv += `\n"${titles[key] || key}"\n`; // Titel der Rangliste
+                csv += `\n"${titles[key] || key}"\n`;
                 const headers = [
                     "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
                     ...(showGrades ? ["Note"] : []),
                     ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
                 ];
-                // Schreibe Header (sicher in Anführungszeichen)
                 csv += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
 
-                // Gehe durch jeden Schüler in der Liste
                 list.forEach((s, i) => {
-                    // *** KORREKTUR HIER: Prüfe auf Helfer für die Rang-Anzeige ***
-                    const rankDisplay = s.helfer === true ? `"Helfer"` : (i + 1); // "Helfer" als String zitieren, sonst Zahl
+                    // KORREKTUR: Rang nur anzeigen, wenn kein Helfer
+                    let rankDisplay = s.rang || (s.helfer === true ? "Helfer" : (i + 1));
 
-                    // Erstelle die Zeile für CSV, Werte sicher zitieren
                     const formattedRow = [
-                        rankDisplay, // Verwende rankDisplay (ist schon Zahl oder zitierter String)
+                        rankDisplay,
                         `"${s.vorname.replace(/"/g, '""')}"`,
                         `"${s.nachname.replace(/"/g, '""')}"`,
                         `"${s.klasse.replace(/"/g, '""')}"`,
-                        s.total_points, // Zahl bleibt Zahl
-                        // Note sicher formatieren (wenn String, zitieren)
+                        s.total_points,
                         ...(showGrades ? [(typeof s.grade === 'string' ? `"${(s.grade ?? '').replace(/"/g, '""')}"` : (s.grade ?? '""'))] : []),
-                        // Sportresultate (Logik für "Übersprungen" bleibt)
                         ...sportHeaders.map(sport => {
                             const detail = s.resultDetails?.[sport];
                             let displayValue;
@@ -185,17 +179,14 @@ export default function ExportPopup({ onClose }) {
                                 const unit = sportUnitMap[sport] || "";
                                 displayValue = value !== undefined && value !== null ? `${value} ${unit}`.trim() : "";
                             }
-                            // Sport-Ergebnis sicher zitieren
                             return `"${displayValue.replace(/"/g, '""')}"`;
                         })
                     ];
-                    // Füge die formatierte Zeile zum CSV hinzu
                     csv += formattedRow.join(",") + "\n";
                 });
             });
 
-            // Erstelle Blob und lade CSV herunter (unverändert)
-            const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"}); // charset hinzugefügt für bessere Kompatibilität
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
@@ -203,67 +194,49 @@ export default function ExportPopup({ onClose }) {
             a.click();
             URL.revokeObjectURL(url);
 
-        }else if (exportType === "excel") {
-                const wb = XLSX.utils.book_new();
+        } else if (exportType === "excel") {
+            const wb = XLSX.utils.book_new();
 
-                allKeys.forEach((key) => {
-                    const list = ranglisten[key]; // Enthält 'helfer' (Annahme: API/handleGenerateRanking korrekt)
+            allKeys.forEach((key) => {
+                const list = ranglisten[key];
 
-                    // Skip if list is empty
-                    if (list.length === 0) return;
+                if (list.length === 0) return;
 
-                    // Definiere die Header
-                    const headers = [
-                        "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
-                        ...(showGrades ? ["Note"] : []),
-                        ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
+                const headers = [
+                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
+                    ...(showGrades ? ["Note"] : []),
+                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
+                ];
+
+                const rows = list.map((s, i) => {
+                    // KORREKTUR: Rang nur anzeigen, wenn kein Helfer
+                    let rankDisplay = s.helfer === true ? "Helfer" : (i + 1);
+
+                    return [
+                        rankDisplay,
+                        s.vorname,
+                        s.nachname,
+                        s.klasse,
+                        s.total_points,
+                        ...(showGrades ? [s.grade ?? "-"] : []),
+                        ...sportHeaders.map(sport => {
+                            const detail = s.resultDetails?.[sport];
+                            if (detail && detail.skipped === true) {
+                                return "Übersprungen";
+                            }
+                            const value = detail?.value;
+                            const unit = sportUnitMap[sport] || "";
+                            return typeof value === 'number' ? value : `${value} ${unit}`.trim();
+                        })
                     ];
-
-                    // Erstelle die Datenzeilen
-                    const rows = list.map((s, i) => {
-                        // *** KORREKTUR HIER: Prüfe auf Helfer für die Rang-Anzeige ***
-                        const rankDisplay = s.helfer === true ? "Helfer" : (i + 1); // Text oder Zahl
-
-                        // Gib das Array für die Zeile zurück
-                        return [
-                            rankDisplay, // Verwende rankDisplay
-                            s.vorname,   // String
-                            s.nachname,  // String
-                            s.klasse,    // String oder Zahl? Annahme String
-                            s.total_points, // Zahl
-                            ...(showGrades ? [s.grade ?? "-"] : []), // Zahl oder String
-                            // Sportresultate (Logik für "Übersprungen" bleibt)
-                            ...sportHeaders.map(sport => {
-                                const detail = s.resultDetails?.[sport];
-                                if (detail && detail.skipped === true) {
-                                    return "Übersprungen"; // String
-                                }
-                                const value = detail?.value;
-                                const unit = sportUnitMap[sport] || "";
-                                if (value !== undefined && value !== null) {
-                                    // Versuche Zahl zu behalten, sonst String mit Einheit
-                                    return typeof value === 'number' ? value : `${value} ${unit}`.trim();
-                                } else {
-                                    return ""; // Leere Zelle
-                                }
-                            })
-                        ];
-                    });
-
-                    // Erstelle das Sheet aus Headern und Datenzeilen
-                    const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-                    // Optional: Spaltenbreiten anpassen (Beispiel)
-                    // const wscols = [ {wch:6}, {wch:20}, {wch:20}, {wch:10}, {wch:15}, /* weitere Spalten */ ];
-                    // sheet['!cols'] = wscols;
-
-                    // Füge das Sheet zum Workbook hinzu
-                    XLSX.utils.book_append_sheet(wb, sheet, key.substring(0, 31)); // Blattname gekürzt auf 31 Zeichen
                 });
 
-                // Schreibe und lade die Excel-Datei herunter
-                XLSX.writeFile(wb, `${filename}.xlsx`);
-            }
+                const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                XLSX.utils.book_append_sheet(wb, sheet, key.substring(0, 31));
+            });
+
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+        }
     };
 
     const generateExportFilename = () => {
@@ -291,7 +264,6 @@ export default function ExportPopup({ onClose }) {
 
             const { rankings, results, sports, students: studentDetails } = json;
 
-            // Create a map of student details for quick lookup
             const studentMap = {};
             for (const student of studentDetails) {
                 studentMap[student.id] = student;
@@ -300,7 +272,6 @@ export default function ExportPopup({ onClose }) {
             const resultsMap = {};
             for (const r of results) {
                 if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
-
                 resultsMap[r.student_id][r.sport] = {
                     value: r.best_result?.value ?? r.best_result,
                     skipped: r.skipped
@@ -322,6 +293,7 @@ export default function ExportPopup({ onClose }) {
 
             if (mode === "preset") {
                 for (const [key, list] of Object.entries(rankings)) {
+                    let rankCounter = 1; // Initialisiere den Rang-Zähler für jede Liste
                     listen[key] = list
                         .map((s) => ({
                             ...s,
@@ -330,8 +302,28 @@ export default function ExportPopup({ onClose }) {
                             total_points: s.total_points || 0,
                             grade: studentMap[s.id]?.grade,
                             resultDetails: resultsMap[s.id] || {},
+                            helfer: studentMap[s.id]?.helfer,
+                            anwesend: studentMap[s.id]?.anwesend
                         }))
-                        .sort((a, b) => b.total_points - a.total_points);
+                        .sort((a, b) => {
+                            // Abwesende und Helfer immer ans Ende sortieren
+                            if (!a.anwesend && b.anwesend) return 1;
+                            if (a.anwesend && !b.anwesend) return -1;
+                            if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
+                            if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
+                            // Ansonsten nach Punkten absteigend sortieren
+                            return b.total_points - a.total_points;
+                        })
+                        .map(student => {
+                            if (student.anwesend === true && student.helfer === false) {
+                                student.rang = rankCounter++; // Inkrementiere den Zähler und weise den Rang zu
+                            } else if (student.anwesend === false) {
+                                student.rang = "Abwesend";
+                            } else {
+                                student.rang = "Helfer";
+                            }
+                            return student;
+                        });
 
                     if (preset === "preset1") {
                         const [kategorie, geschlecht] = key.split("-");
@@ -342,14 +334,11 @@ export default function ExportPopup({ onClose }) {
                     }
                 }
             } else {
-                // Custom filter mode
-                // First, let's get all students from all categories
                 let allStudents = [];
                 for (const list of Object.values(rankings)) {
                     allStudents = [...allStudents, ...list];
                 }
 
-                // Enrich with result details
                 allStudents = allStudents.map(s => ({
                     ...s,
                     vorname: s.vorname,
@@ -357,11 +346,11 @@ export default function ExportPopup({ onClose }) {
                     total_points: s.total_points || 0,
                     grade: studentMap[s.id]?.grade,
                     resultDetails: resultsMap[s.id] || {},
+                    helfer: studentMap[s.id]?.helfer, // Übernehmen der 'helfer'-Eigenschaft
+                    anwesend: studentMap[s.id]?.anwesend // Übernehmen der 'anwesend'-Eigenschaft
                 }));
 
-                // Apply filters
                 let filteredStudents = allStudents;
-
                 if (filters.geschlecht !== "alle") {
                     filteredStudents = filteredStudents.filter(s => s.geschlecht === filters.geschlecht);
                 }
@@ -378,15 +367,31 @@ export default function ExportPopup({ onClose }) {
                     filteredStudents = filteredStudents.filter(s => s.klasse === filters.klasse);
                 }
 
-                // Sort by total points
-                filteredStudents = filteredStudents.sort((a, b) => b.total_points - a.total_points);
+                let rankCounter = 1;
+                filteredStudents = filteredStudents.sort((a, b) => {
+                    // Abwesende und Helfer immer ans Ende sortieren
+                    if (!a.anwesend && b.anwesend) return 1;
+                    if (a.anwesend && !b.anwesend) return -1;
+                    if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
+                    if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
+                    // Ansonsten nach Punkten absteigend sortieren
+                    return b.total_points - a.total_points;
+                }).map(student => {
+                    // Weise den Rang zu, aber nur, wenn 'anwesend' true und 'helfer' false ist
+                    if (student.anwesend === true && student.helfer === false) {
+                        student.rang = rankCounter++; // Inkrementiere den Zähler und weise den Rang zu
+                    } else if (student.anwesend === false) {
+                        student.rang = "Abwesend";
+                    } else {
+                        student.rang = "Helfer";
+                    }
+                    return student;
+                });
 
-                // Create a single category for custom filtered results
                 listen = {
                     "Benutzerdefiniert": filteredStudents
                 };
 
-                // Create descriptive title
                 const geschlechtText = filters.geschlecht === "alle" ? "Alle" :
                     (filters.geschlecht === "maennlich" ? "Männlich" : "Weiblich");
 
@@ -399,7 +404,6 @@ export default function ExportPopup({ onClose }) {
                 titles["Benutzerdefiniert"] = `Rangliste für ${geschlechtText} in ${altersText}, ${klasseText}`;
             }
 
-            // Save titles and sport info for export
             window.exportTitles = titles;
 
             const allSports = new Set();
@@ -421,9 +425,7 @@ export default function ExportPopup({ onClose }) {
         } finally {
             setIsGenerating(false);
         }
-    };
-
-    // Function to handle grade calculation
+    };    // Function to handle grade calculation
     const calculateGrades = async () => {
         try {
             setIsGenerating(true);

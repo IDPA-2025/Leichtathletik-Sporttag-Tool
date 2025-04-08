@@ -3,7 +3,6 @@ import { supabase } from "../../../lib/supabaseClient";
 
 export async function GET() {
     try {
-        // Alle anwesenden Schüler laden
         const { data: students, error: studentError } = await supabase
             .from("students")
             .select("id, vorname, nachname, klasse, geburtsdatum, geschlecht, age_category, grade, anwesend, total_points, helfer")
