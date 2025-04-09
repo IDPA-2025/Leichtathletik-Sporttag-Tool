@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     experimental: {
-        turbo: false,
+        turbo: {
+            enabled: true
+        }
     },
     images: {
         domains: ['qcxsrkpddxkljwaiqyux.supabase.co'],
