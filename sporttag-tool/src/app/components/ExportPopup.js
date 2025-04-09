@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
 export default function ExportPopup({ onClose }) {
@@ -18,6 +16,7 @@ export default function ExportPopup({ onClose }) {
     const [showDetails, setShowDetails] = useState(false);
     const [showGrades, setShowGrades] = useState(false);
     const [klassen, setKlassen] = useState([]);
+    const [exportData, setExportData] = useState(null);
 
     useEffect(() => {
         const fetchKlassen = async () => {
@@ -34,211 +33,6 @@ export default function ExportPopup({ onClose }) {
         fetchKlassen();
     }, []);
 
-
-    const handleExport = () => {
-        const filename = generateExportFilename();
-        const titles = window.exportTitles || {};
-        const sportHeaders = showDetails ? window.sportHeaders || [] : [];
-        const sportUnitMap = window.sportUnitMap || {};
-
-        // Get filtered keys or all keys depending on mode
-        const allKeys = Object.keys(ranglisten);
-
-        if (exportType === "pdf") {
-            const doc = new jsPDF();
-            let pos = 10;
-
-            allKeys.forEach((key, idx) => {
-                const list = ranglisten[key];
-                if (list.length === 0) return;
-
-                doc.setFont("helvetica", "bold");
-                doc.text(titles[key] || key, 10, pos);
-                doc.setFont("helvetica", "normal");
-                pos += 6;
-
-                const headers = [
-                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
-                    ...(showGrades ? ["Note"] : []),
-                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
-                ];
-
-                const body = list.map((s, i) => {
-                    // KORREKTUR: Rang nur anzeigen, wenn kein Helfer
-                    let rankDisplay = s.rang || (s.helfer === true ? "Helfer" : (i + 1));
-
-                    return [
-                        rankDisplay,
-                        s.vorname,
-                        s.nachname,
-                        s.klasse,
-                        s.total_points,
-                        ...(showGrades ? [s.grade || "-"] : []),
-                        ...sportHeaders.map(sport => {
-                            const detail = s.resultDetails?.[sport];
-                            if (detail && detail.skipped === true) {
-                                return "Übersprungen";
-                            }
-                            const value = detail?.value;
-                            const unit = sportUnitMap[sport] || "";
-                            return value !== undefined && value !== null ? `${value} ${unit}`.trim() : "";
-                        })
-                    ];
-                });
-
-                autoTable(doc, {
-                    startY: pos,
-                    head: [headers],
-                    body,
-                    theme: "striped",
-                    headStyles: { fillColor: [41, 128, 185], fontSize: 7 },
-                    styles: { fontSize: 7, cellPadding: 1 },
-                    didParseCell: function (data) {
-                        const student = list[data.row.index];
-
-                        if (data.section === 'body' && student) {
-                            data.cell.styles.textColor = [0, 0, 0];
-                            data.cell.styles.fillColor = null;
-                            data.cell.styles.fontStyle = 'normal';
-
-                            if (student.helfer !== true) {
-                                if (data.row.index === 0) data.cell.styles.fillColor = [255, 223, 100];
-                                else if (data.row.index === 1) data.cell.styles.fillColor = [220, 220, 220];
-                                else if (data.row.index === 2) data.cell.styles.fillColor = [205, 127, 50];
-                                else if (student.total_points === 0) data.cell.styles.fillColor = [255, 102, 102];
-
-                            } else if (data.column.index === 0) {
-                                data.cell.styles.fontStyle = 'bold';
-                            }
-                            if (student.rang === "Abwesend") {
-                                data.cell.styles.fillColor = [240, 240, 240];
-                                data.cell.styles.fontStyle = 'bold';
-                            }
-
-
-                            if (showDetails) {
-                                const fixedColumnCount = 5 + (showGrades ? 1 : 0);
-                                if (data.column.index >= fixedColumnCount) {
-                                    const sportIndex = data.column.index - fixedColumnCount;
-                                    if (sportIndex >= 0 && sportIndex < sportHeaders.length) {
-                                        const sportCode = sportHeaders[sportIndex];
-                                        const detail = student.resultDetails?.[sportCode];
-                                        if (detail && detail.skipped === true) {
-                                            data.cell.styles.fillColor = [255, 204, 203];
-                                            data.cell.styles.textColor = [150, 150, 150];
-                                            data.cell.styles.fontStyle = 'normal';
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-                pos = doc.lastAutoTable.finalY + 10;
-                // Seitenumbruch-Logik
-                if (idx < allKeys.length - 1) {
-                    doc.addPage();
-                    pos = 10;
-                }
-            });
-            doc.save(`${filename}.pdf`);
-
-        } else if (exportType === "csv") {
-            let csv = "";
-            allKeys.forEach((key) => {
-                const list = ranglisten[key];
-
-                if (list.length === 0) return;
-
-                csv += `\n"${titles[key] || key}"\n`;
-                const headers = [
-                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
-                    ...(showGrades ? ["Note"] : []),
-                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
-                ];
-                csv += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
-
-                list.forEach((s, i) => {
-                    // KORREKTUR: Rang nur anzeigen, wenn kein Helfer
-                    let rankDisplay = s.rang || (s.helfer === true ? "Helfer" : (i + 1));
-
-                    const formattedRow = [
-                        rankDisplay,
-                        `"${s.vorname.replace(/"/g, '""')}"`,
-                        `"${s.nachname.replace(/"/g, '""')}"`,
-                        `"${s.klasse.replace(/"/g, '""')}"`,
-                        s.total_points,
-                        ...(showGrades ? [(typeof s.grade === 'string' ? `"${(s.grade ?? '').replace(/"/g, '""')}"` : (s.grade ?? '""'))] : []),
-                        ...sportHeaders.map(sport => {
-                            const detail = s.resultDetails?.[sport];
-                            let displayValue;
-                            if (detail && detail.skipped === true) {
-                                displayValue = "Übersprungen";
-                            } else {
-                                const value = detail?.value;
-                                const unit = sportUnitMap[sport] || "";
-                                displayValue = value !== undefined && value !== null ? `${value} ${unit}`.trim() : "";
-                            }
-                            return `"${displayValue.replace(/"/g, '""')}"`;
-                        })
-                    ];
-                    csv += formattedRow.join(",") + "\n";
-                });
-            });
-
-            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${filename}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-
-        } else if (exportType === "excel") {
-            const wb = XLSX.utils.book_new();
-
-            allKeys.forEach((key) => {
-                const list = ranglisten[key];
-
-                if (list.length === 0) return;
-
-                const headers = [
-                    "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
-                    ...(showGrades ? ["Note"] : []),
-                    ...sportHeaders.map(code => window.sportNameMap?.[code] || code)
-                ];
-
-                const rows = list.map((s, i) => {
-                    // KORREKTUR: Rang nur anzeigen, wenn kein Helfer
-                    let rankDisplay = s.helfer === true ? "Helfer" : (i + 1);
-
-                    return [
-                        rankDisplay,
-                        s.vorname,
-                        s.nachname,
-                        s.klasse,
-                        s.total_points,
-                        ...(showGrades ? [s.grade ?? "-"] : []),
-                        ...sportHeaders.map(sport => {
-                            const detail = s.resultDetails?.[sport];
-                            if (detail && detail.skipped === true) {
-                                return "Übersprungen";
-                            }
-                            const value = detail?.value;
-                            const unit = sportUnitMap[sport] || "";
-                            return typeof value === 'number' ? value : `${value} ${unit}`.trim();
-                        })
-                    ];
-                });
-
-                const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-                XLSX.utils.book_append_sheet(wb, sheet, key.substring(0, 31));
-            });
-
-            XLSX.writeFile(wb, `${filename}.xlsx`);
-        }
-    };
-
     const generateExportFilename = () => {
         if (mode === "preset") {
             return preset === "preset1"
@@ -252,172 +46,122 @@ export default function ExportPopup({ onClose }) {
         }
     };
 
+    const handleExport = async () => {
+        const filename = generateExportFilename();
+
+        if (exportType === "pdf") {
+            try {
+                setIsGenerating(true);
+                const response = await fetch("/api/export/generate-pdf", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        exportData,
+                        showDetails,
+                        showGrades
+                    })
+                });
+
+                if (!response.ok) throw new Error("PDF-Export fehlgeschlagen");
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${filename}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error("Fehler beim PDF-Export:", error);
+                setMessage("❌ Fehler beim PDF-Export");
+            } finally {
+                setIsGenerating(false);
+            }
+        } else if (exportType === "csv") {
+            try {
+                setIsGenerating(true);
+                const response = await fetch("/api/export/generate-csv", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        exportData,
+                        showDetails,
+                        showGrades
+                    })
+                });
+
+                if (!response.ok) throw new Error("CSV-Export fehlgeschlagen");
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${filename}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error("Fehler beim CSV-Export:", error);
+                setMessage("❌ Fehler beim CSV-Export");
+            } finally {
+                setIsGenerating(false);
+            }
+        } else if (exportType === "excel") {
+            try {
+                setIsGenerating(true);
+                const response = await fetch("/api/export/generate-excel", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        exportData,
+                        showDetails,
+                        showGrades
+                    })
+                });
+
+                if (!response.ok) throw new Error("Excel-Export fehlgeschlagen");
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${filename}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error("Fehler beim Excel-Export:", error);
+                setMessage("❌ Fehler beim Excel-Export");
+            } finally {
+                setIsGenerating(false);
+            }
+        }
+    };
+
     const handleGenerateRanking = async () => {
         setIsGenerating(true);
         setMessage("");
 
         try {
-            const res = await fetch("/api/rankings/with-details");
-            const json = await res.json();
+            // Alle Parameter an die API übergeben
+            const res = await fetch("/api/rankings/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    mode,
+                    preset,
+                    filters,
+                    showDetails,
+                    showGrades
+                })
+            });
 
-            if (!res.ok || !json.rankings) throw new Error(json.error || "Fehler beim Laden der Daten");
-
-            const { rankings, results, sports, students: studentDetails } = json;
-
-            const studentMap = {};
-            for (const student of studentDetails) {
-                studentMap[student.id] = student;
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Fehler beim Laden der Daten");
             }
 
-            const resultsMap = {};
-            for (const r of results) {
-                if (!resultsMap[r.student_id]) resultsMap[r.student_id] = {};
-                resultsMap[r.student_id][r.sport] = {
-                    value: r.best_result?.value ?? r.best_result,
-                    skipped: r.skipped
-                };
-            }
-
-            const sportUnitMap = {};
-            for (const s of sports) {
-                sportUnitMap[s.code] = s.mesure_unit_short;
-            }
-
-            const sportNameMap = {};
-            for (const s of sports) {
-                sportNameMap[s.code] = s.name;
-            }
-
-            const titles = {};
-            let listen = {};
-
-            if (mode === "preset") {
-                for (const [key, list] of Object.entries(rankings)) {
-                    let rankCounter = 1; // Initialisiere den Rang-Zähler für jede Liste
-                    listen[key] = list
-                        .map((s) => ({
-                            ...s,
-                            vorname: s.vorname,
-                            nachname: s.nachname,
-                            total_points: s.total_points || 0,
-                            grade: studentMap[s.id]?.grade,
-                            resultDetails: resultsMap[s.id] || {},
-                            helfer: studentMap[s.id]?.helfer,
-                            anwesend: studentMap[s.id]?.anwesend
-                        }))
-                        .sort((a, b) => {
-                            // Abwesende und Helfer immer ans Ende sortieren
-                            if (!a.anwesend && b.anwesend) return 1;
-                            if (a.anwesend && !b.anwesend) return -1;
-                            if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
-                            if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
-                            // Ansonsten nach Punkten absteigend sortieren
-                            return b.total_points - a.total_points;
-                        })
-                        .map(student => {
-                            if (student.anwesend === true && student.helfer === false) {
-                                student.rang = rankCounter++; // Inkrementiere den Zähler und weise den Rang zu
-                            } else if (student.anwesend === false) {
-                                student.rang = "Abwesend";
-                            } else {
-                                student.rang = "Helfer";
-                            }
-                            return student;
-                        });
-
-                    if (preset === "preset1") {
-                        const [kategorie, geschlecht] = key.split("-");
-                        titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${kategorie.replace("unter16", "bis 15").replace("16bis17", "16 bis 17").replace("ueber18", "18+")}`;
-                    } else if (preset === "preset2") {
-                        const [klasse, geschlecht] = key.split("-");
-                        titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${klasse}`;
-                    }
-                }
-            } else {
-                let allStudents = [];
-                for (const list of Object.values(rankings)) {
-                    allStudents = [...allStudents, ...list];
-                }
-
-                allStudents = allStudents.map(s => ({
-                    ...s,
-                    vorname: s.vorname,
-                    nachname: s.nachname,
-                    total_points: s.total_points || 0,
-                    grade: studentMap[s.id]?.grade,
-                    resultDetails: resultsMap[s.id] || {},
-                    helfer: studentMap[s.id]?.helfer, // Übernehmen der 'helfer'-Eigenschaft
-                    anwesend: studentMap[s.id]?.anwesend // Übernehmen der 'anwesend'-Eigenschaft
-                }));
-
-                let filteredStudents = allStudents;
-                if (filters.geschlecht !== "alle") {
-                    filteredStudents = filteredStudents.filter(s => s.geschlecht === filters.geschlecht);
-                }
-
-                if (filters.altersgruppe !== "alle") {
-                    filteredStudents = filteredStudents.filter(s => {
-                        if (filters.altersgruppe === "-15") return s.alter < 16;
-                        if (filters.altersgruppe === "16-17") return s.alter >= 16 && s.alter <= 17;
-                        return s.alter > 17;
-                    });
-                }
-
-                if (filters.klasse !== "alle") {
-                    filteredStudents = filteredStudents.filter(s => s.klasse === filters.klasse);
-                }
-
-                let rankCounter = 1;
-                filteredStudents = filteredStudents.sort((a, b) => {
-                    // Abwesende und Helfer immer ans Ende sortieren
-                    if (!a.anwesend && b.anwesend) return 1;
-                    if (a.anwesend && !b.anwesend) return -1;
-                    if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
-                    if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
-                    // Ansonsten nach Punkten absteigend sortieren
-                    return b.total_points - a.total_points;
-                }).map(student => {
-                    // Weise den Rang zu, aber nur, wenn 'anwesend' true und 'helfer' false ist
-                    if (student.anwesend === true && student.helfer === false) {
-                        student.rang = rankCounter++; // Inkrementiere den Zähler und weise den Rang zu
-                    } else if (student.anwesend === false) {
-                        student.rang = "Abwesend";
-                    } else {
-                        student.rang = "Helfer";
-                    }
-                    return student;
-                });
-
-                listen = {
-                    "Benutzerdefiniert": filteredStudents
-                };
-
-                const geschlechtText = filters.geschlecht === "alle" ? "Alle" :
-                    (filters.geschlecht === "maennlich" ? "Männlich" : "Weiblich");
-
-                const altersText = filters.altersgruppe === "alle" ? "alle Altersgruppen" :
-                    (filters.altersgruppe === "-15" ? "bis 15 Jahre" :
-                        (filters.altersgruppe === "16-17" ? "16 bis 17 Jahre" : "18+ Jahre"));
-
-                const klasseText = filters.klasse === "alle" ? "alle Klassen" : `Klasse ${filters.klasse}`;
-
-                titles["Benutzerdefiniert"] = `Rangliste für ${geschlechtText} in ${altersText}, ${klasseText}`;
-            }
-
-            window.exportTitles = titles;
-
-            const allSports = new Set();
-            for (const studentId in resultsMap) {
-                for (const sport in resultsMap[studentId]) {
-                    allSports.add(sport);
-                }
-            }
-
-            window.sportHeaders = Array.from(allSports);
-            window.sportUnitMap = sportUnitMap;
-            window.sportNameMap = sportNameMap;
-
-            setRanglisten(listen);
+            const data = await res.json();
+            setRanglisten(data.ranglisten);
+            setExportData(data); // Speichere die vollständigen Daten für den Export
             setStep(2);
         } catch (err) {
             console.error("Fehler beim Generieren:", err);
@@ -425,7 +169,8 @@ export default function ExportPopup({ onClose }) {
         } finally {
             setIsGenerating(false);
         }
-    };    // Function to handle grade calculation
+    };
+
     const calculateGrades = async () => {
         try {
             setIsGenerating(true);
@@ -433,9 +178,7 @@ export default function ExportPopup({ onClose }) {
 
             const response = await fetch("/api/students/calculate-grade", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                }
+                headers: { "Content-Type": "application/json" }
             });
 
             const result = await response.json();
@@ -445,9 +188,6 @@ export default function ExportPopup({ onClose }) {
             }
 
             setMessage(`✅ Noten für ${result.updated} Schüler aktualisiert`);
-
-            // Re-fetch data after grade calculation
-            await handleGenerateRanking();
         } catch (error) {
             console.error("Fehler bei der Notenberechnung:", error);
             setMessage("❌ Fehler: " + (error.message || "Unbekannter Fehler bei der Notenberechnung"));
@@ -560,7 +300,6 @@ export default function ExportPopup({ onClose }) {
                                     await calculateGrades(); // erst Noten berechnen
                                     await handleGenerateRanking(); // dann Rangliste generieren
                                 }}
-
                                 disabled={isGenerating}
                                 className={`py-3 rounded-lg font-semibold ${isGenerating ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                             >
@@ -579,8 +318,9 @@ export default function ExportPopup({ onClose }) {
                         <button
                             onClick={handleExport}
                             className="w-full py-3 rounded-lg font-semibold bg-green-600 hover:bg-green-700 text-white"
+                            disabled={isGenerating}
                         >
-                            📥 Exportieren als {exportType.toUpperCase()}
+                            {isGenerating ? "Wird exportiert..." : `📥 Exportieren als ${exportType.toUpperCase()}`}
                         </button>
                     </>
                 )}

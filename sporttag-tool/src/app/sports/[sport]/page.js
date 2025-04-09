@@ -10,6 +10,23 @@ export default function GroupOverview() {
     const { sport } = useParams()
     const [groups, setGroups] = useState([])
     const [sportName, setSportName] = useState("");
+    const [selectedGroups, setSelectedGroups] = useState([]);
+
+    const toggleGroup = (groupId) => {
+        setSelectedGroups(prev =>
+            prev.includes(groupId)
+                ? prev.filter(id => id !== groupId)
+                : [...prev, groupId]
+        );
+    };
+
+    const handleGoToResults = () => {
+        if (selectedGroups.length > 0) {
+            const groupParam = selectedGroups.join(",");
+            window.location.href = `/sports/${sport}/${groupParam}`;
+        }
+    };
+
 
 
     useEffect(() => {
@@ -71,6 +88,18 @@ export default function GroupOverview() {
                 <div className="w-full flex-1 flex justify-center items-center p-4">
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
                         {groups.map(({ id, klasse, geschlecht }) => (
+                            <div
+                                key={id}
+                                onClick={() => toggleGroup(id)}
+                                className={`cursor-pointer relative aspect-square border-2 ${
+                                    selectedGroups.includes(id) ? 'border-blue-600 bg-blue-50' : 'border-green-500'
+                                } rounded-lg transition flex flex-col items-center justify-center p-4`}
+                            >
+                                <p className="text-gray-700 text-xl md:text-2xl font-semibold text-center">{klasse}</p>
+                                <div
+                                    className={`absolute bottom-0 right-0 w-0 h-0 border-b-[20px] border-l-[20px] sm:border-l-[50px] sm:border-b-[50px] border-transparent rounded-br-md ${geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'}`}></div>
+                            </div>
+
                             <Link key={id} href={`/sports/${sport}/${klasse}-${geschlecht}`}>
                                 <div className="relative aspect-square border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition flex flex-col items-center justify-center p-4">
                                     {/* Gruppenname */}
@@ -81,6 +110,17 @@ export default function GroupOverview() {
                             </Link>
                         ))}
                     </div>
+                    {selectedGroups.length > 0 && (
+                        <div className="mt-6">
+                            <button
+                                onClick={handleGoToResults}
+                                className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold"
+                            >
+                                Ergebnisse anzeigen ({selectedGroups.length} Gruppen)
+                            </button>
+                        </div>
+                    )}
+
                 </div>
 
             </div>
