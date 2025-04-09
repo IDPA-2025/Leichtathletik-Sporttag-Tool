@@ -88,6 +88,39 @@ export async function POST(req) {
 
             const punkte = pointData && pointData.length > 0 ? pointData[0].punkte : null;
 
+            let note = 1; // Default-Fallback
+
+            if (!isSkipped && punkte !== null) {
+                // Alterskategorie und Geschlecht vom Student holen
+                const { data: studentData, error: studentError } = await supabase
+                    .from("students")
+                    .select("geschlecht, age_category")
+                    .eq("id", student.id)
+                    .maybeSingle();
+
+                if (studentError) throw studentError;
+
+                const { age_category } = studentData;
+
+                // Die passende Note suchen
+                const { data: gradeData, error: gradeError } = await supabase
+                    .from("grades_table")
+                    .select("grade")
+                    .eq("gender", geschlecht)
+                    .eq("age_category", age_category)
+                    .lte("average_points_per_category", punkte)
+                    .order("average_points_per_category", { ascending: false })
+                    .limit(1);
+
+                if (gradeError) throw gradeError;
+
+                if (gradeData && gradeData.length > 0) {
+                    note = gradeData[0].grade;
+                }
+            }
+
+
+
             const update = {
                 student_id: student.id,
                 sport: sport,
@@ -98,6 +131,8 @@ export async function POST(req) {
                 best_result: isSkipped ? null : bestResult,
                 points: isSkipped ? null : punkte,
                 skipped: isSkipped,
+                grade: isSkipped ? null : note,
+
             };
 
             const { data: existingData } = await supabase

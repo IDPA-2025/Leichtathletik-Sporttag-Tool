@@ -16,6 +16,7 @@ export async function GET(req) {
         .eq("klasse", klasse)
         .eq("geschlecht", geschlecht);
 
+
     if (error) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
