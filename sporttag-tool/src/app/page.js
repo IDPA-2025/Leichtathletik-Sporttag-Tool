@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { AnimatedTooltip } from "./components/AnimatedTooltip"; // ggf. Pfad anpassen
 
 export default function Home() {
   const [logoFadeOut, setLogoFadeOut] = useState(false);
@@ -10,9 +11,9 @@ export default function Home() {
   const [removeSplash, setRemoveSplash] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setLogoFadeOut(true), 1400); // Logo rausfaden
-    const t2 = setTimeout(() => setBgFadeOut(true), 1000);   // Hintergrund rausfaden
-    const t3 = setTimeout(() => setRemoveSplash(true), 1800); // Splash entfernen
+    const t1 = setTimeout(() => setLogoFadeOut(true), 1400);
+    const t2 = setTimeout(() => setBgFadeOut(true), 1000);
+    const t3 = setTimeout(() => setRemoveSplash(true), 1800);
 
     return () => {
       clearTimeout(t1);
@@ -20,6 +21,30 @@ export default function Home() {
       clearTimeout(t3);
     };
   }, []);
+
+  const people = [
+    {
+      id: 1,
+      name: "Dominik Hämmerle",
+      designation: "Frontend Engineer & Doc-Author",
+      image: "https://images.weserv.nl/?url=github.com/thats-dominik.png",
+      github: "https://github.com/thats-dominik/",
+    },
+    {
+      id: 2,
+      name: "Sven Lübcke",
+      designation: "Backend Developer & Chief of Developement",
+      image: "https://images.weserv.nl/?url=github.com/klionCH.png",
+      github: "https://github.com/klionCH/",
+    },
+    {
+      id: 3,
+      name: "Devin Mugglin",
+      designation: "Chief of Testing / Genussorientierter Luftgestalter",
+      image: "https://qcxsrkpddxkljwaiqyux.supabase.co/storage/v1/object/sign/images/devin.JPG?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWFnZXMvZGV2aW4uSlBHIiwiaWF0IjoxNzQ0MjA2Mzg2LCJleHAiOjIwMjgwMzAzODZ9.5Wmt7DL5TTb6Tc-xv88FJYzm8Knqo2gCEbQn36QMyew",
+      github: "https://github.com/de27vin/",
+    }
+  ];
 
   return (
     <div className="relative min-h-screen">
@@ -47,20 +72,53 @@ export default function Home() {
             Logge dich ein, um Schülerdaten zu verwalten und Leistungen zu erfassen.
           </p>
           <Link href="/login">
-            <button className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all mb-0">
-              Zum Login
-            </button>
-          </Link>
+  <button className="group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-6 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none">
+    <span className="relative z-10 transition-colors duration-200 group-hover:text-white">
+      Zum Login
+    </span>
+    <svg
+      className="w-4 h-4 transition-transform duration-200 transform group-hover:translate-x-1 group-hover:text-white"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+    </svg>
+  </button>
+</Link>
+          <div className="flex items-center justify-center gap-16 mt-4">
+  {/* RESULTA Logo */}
+  <div className="flex justify-end w-[280px]">
+    <Image
+      src="/resulta.svg"
+      alt="RESULTA Logo"
+      width={200}
+      height={200}
+      className="object-contain max-h-40"
+    />
+  </div>
 
-          <div className="w-full flex justify-center mt-10">
-            <Image
-              src="/resulta-x-kbw.svg"
-              alt="RESULTA und KBW Logo"
-              width={480}
-              height={200}
-              className="object-contain"
-            />
-          </div>
+  {/* Trennlinie (zentriert, dick, #0A74BB) */}
+  <div className="w-[4px] h-32 rounded-full" style={{ backgroundColor: '#0A74BB' }} />
+
+  {/* KBW Logo */}
+  <div className="flex justify-start w-[280px]">
+    <Image
+      src="/kbw.svg"
+      alt="Kantonsschule Büelrain"
+      width={250}
+      height={210}
+      className="object-contain max-h-40"
+    />
+  </div>
+</div>
+      {/* AnimatedTooltip */}
+      <div className="mt-16 flex justify-center">
+        <div className="flex justify-between mr-3">
+          <AnimatedTooltip items={people} />
+        </div>
+      </div>
         </div>
       </div>
     </div>

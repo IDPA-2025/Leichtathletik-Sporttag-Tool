@@ -4,6 +4,8 @@ import {useEffect, useRef, useState} from "react";
 import { Upload } from "lucide-react";
 import BackButton from "@/app/components/BackButton";
 import DateSelect from "@/app/components/DateSelect";
+import { Pencil, X } from "lucide-react";
+import EditClassModal from "@/app/components/EditClassModal";
 
 export default function UploadPage() {
   const [file, setFile] = useState(null);
@@ -14,6 +16,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
   const [dragActive, setDragActive] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -231,24 +234,63 @@ export default function UploadPage() {
   return (
       <div className="wrapper-container">
         <div className="transparent-container-upload gap-6 mb-15">
-          <div className="basis-0 grow w-full lg:max-w-[260px] flex flex-col sm:flex-row lg:flex-col items-center gap-4">
-            <div className="w-full bg-white bg-opacity-80 shadow-md rounded-lg p-4 max-h-[400px] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center">Schon hochgeladene Klassen:</h3>
-              <ul className="space-y-2">
-                {classes.map((cls) => (
-                    <li key={cls} className="flex justify-between items-center text-sm text-gray-800 bg-gray-100 rounded px-2 py-1">
-                      <span>{cls}</span>
-                      <div className="flex space-x-1">
-                        <button onClick={() => handleEditClass(cls)} className="text-blue-600 hover:text-blue-800" title="Klasse bearbeiten">📝</button>
-                        <button onClick={() => handleDeleteClassDirect(cls)} className="text-red-600 hover:text-red-800 font-bold" title={`Lösche Klasse ${cls}`}>✕</button>
-                      </div>
-                    </li>
-                ))}
-              </ul>
-            </div>
+        <div className="basis-0 grow w-full flex flex-col sm:flex-row lg:flex-col items-center gap-6 sm:gap-4 lg:max-w-[260px]">
+  {/* Klassenliste */}
+  <div className="w-full bg-white bg-opacity-90 shadow-md rounded-2xl p-5 max-h-[400px] overflow-y-auto">
+  <h3 className="text-xl font-semibold mb-6 text-gray-800 text-center">
+    Schon hochgeladene Klassen:
+  </h3>
 
-            <DateSelect />
-          </div>
+  <ul className="space-y-4">
+    {classes.map((cls) => (
+      <li
+        key={cls}
+        className="flex justify-between items-center bg-gray-100 rounded-xl px-5 py-3 sm:py-2 text-base text-gray-900 shadow-sm"
+      >
+        <span className="font-medium truncate">{cls}</span>
+
+        {/* DESKTOP Buttons */}
+        <div className="hidden sm:flex gap-4">
+          <button
+            onClick={() => handleEditClass(cls)}
+            title="Bearbeiten"
+            className="flex items-center justify-center w-8 h-8 rounded-lg 
+                       text-blue-600 hover:bg-blue-600 hover:text-white transition
+                       border border-blue-500"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => handleDeleteClassDirect(cls)}
+            title="Löschen"
+            className="flex items-center justify-center w-8 h-8 rounded-lg 
+                       text-red-600 hover:bg-red-600 hover:text-white transition
+                       border border-red-500"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* MOBILE Button */}
+        <div className="flex sm:hidden">
+          <button
+            onClick={() => setSelectedClass(cls)}
+            className="text-sm text-blue-600 underline"
+          >
+            Optionen
+          </button>
+        </div>
+      </li>
+    ))}
+  </ul>
+</div>
+
+  {/* Datumsauswahl */}
+  <div className="w-full sm:w-auto">
+    <DateSelect />
+  </div>
+</div>
 
           <div className="basis-0 grow w-full flex flex-col items-center gap-6">
             <h2 className="mid-title">Dashboard</h2>
@@ -322,6 +364,21 @@ export default function UploadPage() {
           </div>
         </div>
         <BackButton/>
+        {/* Modal ganz unten im JSX einfügen */}
+<EditClassModal
+  isOpen={!!selectedClass}
+  className={selectedClass}
+  onClose={() => setSelectedClass(null)}
+  onEdit={() => {
+    handleEditClass(selectedClass);
+    setSelectedClass(null);
+  }}
+  onDelete={() => {
+    handleDeleteClassDirect(selectedClass);
+    setSelectedClass(null);
+  }}
+/>
 
       </div>
+      
   );}
