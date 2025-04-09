@@ -100,14 +100,6 @@ export default function GroupOverview() {
                                     className={`absolute bottom-0 right-0 w-0 h-0 border-b-[20px] border-l-[20px] sm:border-l-[50px] sm:border-b-[50px] border-transparent rounded-br-md ${geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'}`}></div>
                             </div>
 
-                            <Link key={id} href={`/sports/${sport}/${klasse}-${geschlecht}`}>
-                                <div className="relative aspect-square border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition flex flex-col items-center justify-center p-4">
-                                    {/* Gruppenname */}
-                                    <p className="text-gray-700 text-xl md:text-2xl font-semibold text-center">{klasse}</p>
-                                    {/* Geschlechtsindikator als Dreieck unten rechts */}
-                                    <div className={`absolute bottom-0 right-0 w-0 h-0 border-b-[20px] border-l-[20px] sm:border-l-[50px] sm:border-b-[50px] border-transparent rounded-br-md ${geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'}`}></div>
-                                </div>
-                            </Link>
                         ))}
                     </div>
                     {selectedGroups.length > 0 && (

@@ -8,6 +8,7 @@ import BackButton from "@/app/components/BackButton"; // Icon oben im File impor
 import { ClipboardList } from "lucide-react";
 
 
+
 export default function GroupResults() {
     const { sport, group } = useParams();
     const groupKeys = group.split(","); // z.B. ["1a-maennlich", "2a-weiblich"]
