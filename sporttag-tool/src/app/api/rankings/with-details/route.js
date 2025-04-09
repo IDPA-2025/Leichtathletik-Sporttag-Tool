@@ -14,7 +14,7 @@ export async function GET() {
         // Alle Resultate laden
         const { data: results, error: resultsError } = await supabase
             .from("results")
-            .select("student_id, sport, best_result, skipped, points");
+            .select("student_id, sport, best_result, skipped, points, grade");
 
         if (resultsError) {
             throw new Error("Fehler beim Laden der Resultate: " + resultsError.message);
