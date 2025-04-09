@@ -72,7 +72,7 @@ export default function GroupOverview() {
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
                         {groups.map(({ id, klasse, geschlecht }) => (
                             <Link key={id} href={`/sports/${sport}/${klasse}-${geschlecht}`}>
-                                <div className="relative aspect-square border-2 border-green-500 rounded-lg hover:bg-blue-50 transition flex flex-col items-center justify-center p-4">
+                                <div className="relative aspect-square border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition flex flex-col items-center justify-center p-4">
                                     {/* Gruppenname */}
                                     <p className="text-gray-700 text-xl md:text-2xl font-semibold text-center">{klasse}</p>
                                     {/* Geschlechtsindikator als Dreieck unten rechts */}

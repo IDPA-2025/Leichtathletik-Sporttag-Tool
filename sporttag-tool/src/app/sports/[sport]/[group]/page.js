@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { Loader2, CheckCircle } from "lucide-react";
 import BackButton from "@/app/components/BackButton"; // Icon oben im File importieren
-
+import { ClipboardList } from "lucide-react";
 
 export default function GroupResults() {
     const { sport, group } = useParams();
@@ -225,13 +225,13 @@ export default function GroupResults() {
                 <input
                     type="number"
                     step="0.01"
-                    className="w-20 p-2 text-center border border-gray-300 rounded-lg"
+                    className="w-24 px-3 py-2 text-center border border-blue-600 rounded-md placeholder-blue-600 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={values[index] || ""}
                     onChange={(e) => handleInputChange(student.id, index, e.target.value, type)}
                     placeholder={sportConfig.measure}
                     disabled={!!skippedStudents[student.id]}
                     title={skippedStudents[student.id] ? "Nicht teilgenommen" : ""}
-                />
+                    />
                 {sportConfig.unit}
                 {type === "height" && (
                     <>
@@ -308,21 +308,40 @@ export default function GroupResults() {
                 <h1 className="text-3xl font-semibold text-gray-900 mb-4">
                     Ergebnisse für {sportName || sport}
                 </h1>
+                <div className="flex justify-between items-center mb-4">
+                    <button
+                        onClick={() => setShowScale(true)}
+                        className="inline-flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-200 focus:outline-none"
+                    >
+                        <ClipboardList className="w-5 h-5" />
+                        <span>Punkteskala</span>
+                    </button>
+                    </div>
 
-                <button
-                    className="absolute top-0 left-0 mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium text-gray-800"
-                    onClick={() => setShowScale(true)}
-                >
-                    📋 Punkteskala anzeigen
-                </button>
-
-                <input
-                    type="text"
-                    placeholder="🔍 Schüler suchen..."
-                    className="mb-4 w-full p-3 border border-gray-300 rounded-lg text-gray-900 shadow-sm"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                    <div className="mb-4 w-full relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <svg
+                            className="w-5 h-5 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                            >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.5 10.5a7.5 7.5 0 0013.15 6.15z"
+                            />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Schüler suchen..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 border border-blue-600 rounded-md text-gray-900 placeholder-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
+                        />
+                        </div>
 
                 <div className="flex-grow overflow-y-auto flex flex-col gap-4">
                     {filteredStudents.map((student, index) => (
@@ -363,25 +382,24 @@ export default function GroupResults() {
                 {students.length > 0 && (
                     <div className="mt-6 flex flex-col items-center">
                         <button
-                            className={`py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2
-        ${isSaving ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}
-        text-white transition duration-200`}
-                            onClick={saveResults}
-                            disabled={isSaving}
+                        onClick={saveResults}
+                        disabled={isSaving}
+                        className={`inline-flex items-center gap-2 px-6 py-2 rounded-md border border-blue-600 text-blue-600 font-semibold transition-all duration-200 shadow-sm
+                            ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-600 hover:text-white hover:shadow-md'}`}
                         >
-                            {isSaving ? (
-                                <>
-                                    <Loader2 className="animate-spin" size={18}/>
-                                    Speichern...
-                                </>
-                            ) : saved ? (
-                                <>
-                                    <CheckCircle size={18} />
-                                    Gespeichert!
-                                </>
-                            ) : (
-                                'Ergebnisse speichern'
-                            )}
+                        {isSaving ? (
+                            <>
+                            <Loader2 className="animate-spin" size={18} />
+                            Speichern...
+                            </>
+                        ) : saved ? (
+                            <>
+                            <CheckCircle size={18} />
+                            Gespeichert!
+                            </>
+                        ) : (
+                            'Ergebnisse speichern'
+                        )}
                         </button>
                     </div>
                 )}
@@ -389,42 +407,42 @@ export default function GroupResults() {
             </div>
 
             {showScale && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/10 z-50">
-                    <div className="bg-white w-full max-w-md mx-4 p-6 rounded-2xl shadow-xl border border-gray-200">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                            Punkteskala – {sport}
-                        </h2>
+  <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50 px-4">
+    <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl border border-gray-200">
+      <h2 className="text-2xl font-semibold text-gray-900 mb-5 text-center">
+        Punkteskala – {sport}
+      </h2>
 
-                        <div className="max-h-64 overflow-y-auto rounded border border-gray-200">
-                            <table className="w-full text-sm text-left text-gray-700">
-                                <thead className="bg-gray-100 sticky top-0">
-                                <tr>
-                                    <th className="px-4 py-2 font-semibold">Leistung</th>
-                                    <th className="px-4 py-2 font-semibold">Punkte</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {pointsData.map((row, i) => (
-                                    <tr key={i} className="hover:bg-gray-50">
-                                        <td className="px-4 py-2">{row.leistung}</td>
-                                        <td className="px-4 py-2">{row.punkte}</td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                        </div>
+      <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200">
+        <table className="w-full text-sm text-left text-gray-700">
+          <thead className="bg-gray-100 sticky top-0">
+            <tr>
+              <th className="px-4 py-2 font-semibold">Leistung</th>
+              <th className="px-4 py-2 font-semibold">Punkte</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pointsData.map((row, i) => (
+              <tr key={i} className="hover:bg-gray-50">
+                <td className="px-4 py-2">{row.leistung}</td>
+                <td className="px-4 py-2">{row.punkte}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-                        <div className="mt-6 text-right">
-                            <button
-                                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium"
-                                onClick={() => setShowScale(false)}
-                            >
-                                Schliessen
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+      <div className="mt-6 text-right">
+        <button
+          onClick={() => setShowScale(false)}
+          className="inline-flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-200 focus:outline-none"
+        >
+          Schliessen
+        </button>
+      </div>
+    </div>
+  </div>
+)}
             <BackButton/>
 
         </div>
