@@ -2,56 +2,68 @@ import { supabase } from "../../../lib/supabaseClient";
 
 export async function POST() {
     try {
-        // Lade alle Schüler mit total_points, age_category, geschlecht
-        const { data: students, error: studentError } = await supabase
-            .from("students")
-            .select("id, total_points, age_category, geschlecht")
-            .not("total_points", "is", null);
+        const [{ data: students, error: studentError }, { data: grades, error: gradesError }, { data: results, error: resultsError }] = await Promise.all([
+            supabase.from("students").select("id, total_points, age_category, geschlecht").not("total_points", "is", null),
+            supabase.from("grades_table").select("points_min, grade, gender, age_category"),
+            supabase.from("results").select("student_id, grade, skipped")
+        ]);
 
-        if (studentError) {
-            console.error("Fehler beim Laden der Schüler:", studentError);
-            return new Response(JSON.stringify({ error: studentError.message }), { status: 500 });
+        if (studentError || gradesError || resultsError) {
+            const message = studentError?.message || gradesError?.message || resultsError?.message;
+            return new Response(JSON.stringify({ error: message }), { status: 500 });
         }
 
-        // Lade alle Notenbereiche
-        const { data: grades, error: gradesError } = await supabase
-            .from("grades_table")
-            .select("points_min, grade, gender, age_category");
-
-        if (gradesError) {
-            console.error("Fehler beim Laden der Notenbereiche:", gradesError);
-            return new Response(JSON.stringify({ error: gradesError.message }), { status: 500 });
-        }
+        const studentResultsMap = results.reduce((acc, r) => {
+            if (!acc[r.student_id]) acc[r.student_id] = [];
+            acc[r.student_id].push(r);
+            return acc;
+        }, {});
 
         const updates = [];
 
         for (const student of students) {
             const { id, total_points, age_category, geschlecht } = student;
+            const studentResults = studentResultsMap[id] || [];
 
-            const passendeGrades = grades
-                .filter(g =>
-                    g.gender === geschlecht &&
-                    g.age_category === age_category
-                )
-                .sort((a, b) => b.points_min - a.points_min); // höchste zuerst
+            // Prüfe, ob mindestens eine Sportart übersprungen wurde.
+            const hasSkipped = studentResults.some(r => r.skipped === true);
 
-            if (passendeGrades.length === 0) {
-                console.warn(`Keine Notendefinition für ${geschlecht}, ${age_category}`);
-                continue;
+            let finalGrade;
+
+            if (hasSkipped) {
+                const validGrades = studentResults
+                    .filter(r => r.skipped !== true && r.grade !== null)
+                    .map(r => r.grade);
+
+                if (validGrades.length > 0) {
+                    const sumGrades = validGrades.reduce((sum, grade) => sum + grade, 0);
+                    finalGrade = parseFloat((sumGrades / validGrades.length).toFixed(2));
+                    console.log(`Student ${id}: Durchschnittsnote berechnet =`, finalGrade);
+                } else {
+                    console.warn(`Student ${id}: Keine gültigen Noten verfügbar.`);
+                    finalGrade = null;
+                }
+            } else {
+                const passendeGrades = grades
+                    .filter(g => g.gender === geschlecht && g.age_category === age_category)
+                    .sort((a, b) => b.points_min - a.points_min);
+
+                if (passendeGrades.length === 0) {
+                    console.warn(`Keine Notendefinition für ${geschlecht}, ${age_category}`);
+                    continue;
+                }
+
+                finalGrade = passendeGrades.find(g => total_points >= g.points_min)?.grade
+                    || passendeGrades[passendeGrades.length - 1].grade;
+
+                console.log(`Student ${id}: Note laut Tabelle =`, finalGrade);
             }
 
-            // Suche die höchste passende Note (points_min <= total_points)
-            let note = passendeGrades.find(g => total_points >= g.points_min)?.grade;
-
-            // Falls keine passt, nimm die kleinste verfügbare Note (letzter Eintrag nach sort())
-            if (!note) {
-                note = passendeGrades[passendeGrades.length - 1].grade;
+            if (finalGrade !== null) {
+                updates.push({ id, grade: finalGrade });
             }
-
-            updates.push({ id, grade: note });
         }
 
-        // Update alle Schüler in der Datenbank
         for (const update of updates) {
             const { error } = await supabase
                 .from("students")

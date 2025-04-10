@@ -36,7 +36,7 @@ export default function SportsOverview() {
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
                         {sports.map((sport) => (
                             <Link href={`/sports/${sport.code}`} key={sport.id}>
-                                <div className="aspect-square border-2 border-green-500 rounded-lg hover:bg-blue-50 transition flex flex-col items-center justify-center p-4">
+                                <div className="aspect-square border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition flex flex-col items-center justify-center p-4">
 
                                     {/* Bild */}
                                     <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 flex items-center justify-center">

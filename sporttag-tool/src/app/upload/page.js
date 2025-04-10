@@ -17,6 +17,8 @@ export default function UploadPage() {
   const fileInputRef = useRef(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showMobileEditModal, setShowMobileEditModal] = useState(false);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -47,6 +49,18 @@ export default function UploadPage() {
   useEffect(() => {
     fetchClasses();
   }, []);
+
+  useEffect(() => {
+    if (showMobileEditModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showMobileEditModal]);
 
   const detectSeparator = (text) => text.includes(";") ? ";" : ",";
 
@@ -113,28 +127,28 @@ export default function UploadPage() {
   const handleSubmit = async () => {
     if (students.length === 0) {
       alert("Keine Schülerdaten zum Hochladen!");
-      return;
+      return false;
     }
-
+  
     setLoading(true);
-
+  
     const updatedStudents = students.map((student, index) => ({
       ...student,
       helfer: helpers.includes(index),
       anwesend: !absentees.includes(index),
     }));
-
+  
     try {
       const res = await fetch("/api/students/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedStudents),
       });
-
+  
       const result = await res.json();
-
+  
       if (!res.ok) throw new Error(result.error || "Fehler beim Speichern");
-
+  
       await fetchClasses();
       alert("Erfolgreich gespeichert!");
       setStudents([]);
@@ -142,21 +156,25 @@ export default function UploadPage() {
       setAbsentees([]);
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+  
+      // Sofort erfolgreich zurückkehren
+      return true;
     } catch (error) {
       console.error("Fehler beim Hochladen:", error);
       alert("Fehler beim Hochladen: " + error.message);
+      return false;
     } finally {
       setLoading(false);
+  
+      // Altersberechnung asynchron nachgelagert
+      fetch("/api/students/recalculate-age", { method: "POST" })
+        .then((res) => {
+          if (!res.ok) throw new Error("Fehler beim Alters-Recalc");
+          return res.json();
+        })
+        .then(() => console.log("Alterskategorien erfolgreich neu berechnet"))
+        .catch((err) => console.error("Fehler beim Alters-Update:", err.message));
     }
-
-    const response = await fetch("/api/students/recalculate-age", { method: "POST" });
-    if (!response.ok) {
-      const result = await response.json().catch(() => ({}));
-      console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
-    } else {
-      console.log("Alterskategorien erfolgreich neu berechnet");
-    }
-
   };
 
   const handleDeleteClassDirect = async (cls) => {
@@ -305,9 +323,11 @@ export default function UploadPage() {
             >
               <Upload size={32} className="text-blue-600"/>
               <p className="text-gray-700 text-sm">Drag & Drop Klassenliste hier</p>
-              <label className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-blue-600">
-                Datei suchen
-                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload}/>
+              <label className="mt-4 group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-6 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none cursor-pointer">
+                <span className="relative z-10 transition-colors duration-200 group-hover:text-white">
+                  Datei suchen
+                </span>
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
               </label>
             </div>
 
@@ -358,26 +378,109 @@ export default function UploadPage() {
               </div>
             </div>
 
-            <button onClick={handleSubmit} className={`mt-4 text-white px-6 py-3 rounded-lg shadow-md transition-all ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"}`} disabled={loading}>
-              {loading ? "Speichert..." : "Speichern"}
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className={`group relative inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 px-6 py-2 text-blue-600 transition-all duration-200 focus:outline-none ${
+                loading
+                  ? "opacity-60 cursor-not-allowed"
+                  : "hover:bg-blue-600 hover:text-white hover:shadow-md"
+              }`}
+            >
+              <span className="relative z-10 transition-colors duration-200 group-hover:text-white">
+                {loading ? "Speichert..." : "Speichern"}
+              </span>
             </button>
           </div>
         </div>
         <BackButton/>
         {/* Modal ganz unten im JSX einfügen */}
+        {selectedClass && !showMobileEditModal && (
 <EditClassModal
   isOpen={!!selectedClass}
   className={selectedClass}
   onClose={() => setSelectedClass(null)}
-  onEdit={() => {
-    handleEditClass(selectedClass);
-    setSelectedClass(null);
+  onEdit={async () => {
+    await handleEditClass(selectedClass);
+    setShowMobileEditModal(true); // Modal öffnen
   }}
   onDelete={() => {
     handleDeleteClassDirect(selectedClass);
     setSelectedClass(null);
   }}
 />
+)}
+{/* Mobiles Modal zur Klassenbearbeitung */}
+{showMobileEditModal && (
+  <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+      <h2 className="text-xl font-semibold text-gray-900 text-center">
+        Klasse {selectedClass} bearbeiten
+      </h2>
+
+      <div className="columns-2 gap-4">
+  {students.map((student, index) => (
+    <div
+      key={index}
+      className="break-inside-avoid border border-gray-300 rounded-lg p-3 shadow-sm mb-4"
+    >
+      <div>
+        <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>
+          {student.vorname} {student.nachname}
+        </p>
+        <p className="text-gray-600 text-sm">
+          {student.klasse} | {student.geschlecht}
+        </p>
+      </div>
+
+      <div className="flex justify-between mt-2 items-center">
+        <button
+          className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`}
+          onClick={() => toggleHelper(index)}
+          disabled={absentees.includes(index)}
+        >
+          Helfer
+        </button>
+        <button
+          className={`absent-button ${absentees.includes(index) ? "active" : "inactive"}`}
+          onClick={() => toggleAbsentee(index)}
+        />
+      </div>
+    </div>
+  ))}
+</div>
+
+      <div className="flex justify-end gap-4 pt-4">
+        <button
+          onClick={() => setShowMobileEditModal(false)}
+          className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:underline"
+        >
+          Abbrechen
+        </button>
+
+        <button
+          onClick={async () => {
+            const success = await handleSubmit();
+            if (success) {
+              setShowMobileEditModal(false);
+              setSelectedClass(null);
+            }
+          }}
+          disabled={loading}
+          className={`group relative inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 px-6 py-2 text-blue-600 transition-all duration-200 focus:outline-none ${
+            loading
+              ? "opacity-60 cursor-not-allowed"
+              : "hover:bg-blue-600 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <span className="relative z-10 transition-colors duration-200 group-hover:text-white">
+            {loading ? "Speichert..." : "Speichern"}
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       </div>
       

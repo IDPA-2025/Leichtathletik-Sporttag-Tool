@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import {useEffect, useState} from "react";
+import { ArrowLeft, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
 import ExportPopup from "@/app/components/ExportPopup";
 
 export default function BackButton() {
@@ -9,17 +9,15 @@ export default function BackButton() {
     const [showExport, setShowExport] = useState(false);
     const [role, setRole] = useState(null);
 
-
     useEffect(() => {
         const fetchRole = async () => {
             try {
-                const res = await fetch("/api/me", { cache: "no-store" }); // WICHTIG!
+                const res = await fetch("/api/me", { cache: "no-store" });
                 if (!res.ok) {
                     if (res.status === 403) {
                         router.push("/login");
-                        return; // Wichtig, um die weitere Verarbeitung zu stoppen
+                        return;
                     }
-                    // Andere Fehlerbehandlung, falls nötig
                     setRole(null);
                 } else {
                     const data = await res.json();
@@ -32,43 +30,36 @@ export default function BackButton() {
         fetchRole();
     }, []);
 
-
     return (
         <>
-<div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-4 rounded-full sm:rounded-xl p-2 sm:p-4 shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300 bg-white/20 hover:scale-105 transition-all duration-200">
-  {/* Zurück-Button */}
-  <button
-    onClick={() => router.back()}
-    className="group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-5 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none bg-white/30"
-  >
-    <ArrowLeft
-      className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200 transform group-hover:-translate-x-1 group-hover:text-white"
-    />
-    <span className="hidden sm:inline relative z-10 transition-colors duration-200 group-hover:text-white">
-      Zurück
-    </span>
-  </button>
+<div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-wrap justify-center gap-4 rounded-md sm:rounded-xl px-4 py-2 sm:px-6 sm:py-4 w-fit max-w-[90%] shadow-lg shadow-black/30 backdrop-blur-md border border-gray-300 bg-white/20 hover:scale-105 transition-all duration-200">
+                {/* Zurück-Button */}
+                <button
+                    onClick={() => router.back()}
+                    className="group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-5 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none bg-white/30"
+                >
+                    <ArrowLeft className="w-5 h-5 transition-transform duration-200 transform group-hover:-translate-x-1 group-hover:text-white" />
+                    <span className="hidden sm:inline relative z-10 transition-colors duration-200 group-hover:text-white">
+                        Zurück
+                    </span>
+                </button>
 
-  {/* Exportieren-Button */}
-  {role === "lehrer" && (
-    <button
-      onClick={() => setShowExport(true)}
-      className="group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-5 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none bg-white/30"
-    >
-      <span className="relative z-10 transition-colors duration-200 group-hover:text-white">
-        📤
-      </span>
-      <span className="hidden sm:inline relative z-10 transition-colors duration-200 group-hover:text-white">
-        Exportieren
-      </span>
-    </button>
-  )}
-</div>
-
+                {/* Exportieren-Button */}
+                {role === "lehrer" && (
+                    <button
+                        onClick={() => setShowExport(true)}
+                        className="group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-5 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none bg-white/30"
+                    >
+                        <Upload className="w-5 h-5 transition-transform duration-200 transform group-hover:-translate-y-0.5 group-hover:text-white" />
+                        <span className="hidden sm:inline relative z-10 transition-colors duration-200 group-hover:text-white">
+                            Exportieren
+                        </span>
+                    </button>
+                )}
+            </div>
 
             {/* Export Popup */}
             {showExport && <ExportPopup onClose={() => setShowExport(false)} />}
-
         </>
     );
 }

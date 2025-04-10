@@ -1,4 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
+import CalendarModal from "@/app/components/CalendarModal";
+import { createPortal } from "react-dom";
 
 const DateSelect = () => {
     const [selectedDate, setSelectedDate] = useState(null); // initial null
@@ -6,6 +8,12 @@ const DateSelect = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const calendarRef = useRef(null);
     const buttonRef = useRef(null);
+
+    const [isClient, setIsClient] = useState(false);
+
+useEffect(() => {
+  setIsClient(true);
+}, []);
 
     // Formatiere den Monatsnamen und Jahr für die Anzeige
     const formatMonthYear = (date) => {
@@ -90,6 +98,8 @@ const DateSelect = () => {
     const nextMonth = () => {
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
     };
+
+    
 
     const handleDateClick = async (date) => {
         setSelectedDate(date);
@@ -215,69 +225,64 @@ const DateSelect = () => {
                 <button
                     ref={buttonRef}
                     onClick={() => setIsOpen(!isOpen)}
-                    className="button cursor-pointer"
+                    className="group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-5 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none bg-white/30"
                 >
-                    Datum
+                    <span className="relative z-10 transition-colors duration-200 group-hover:text-white">
+                        Datum
+                    </span>
                 </button>
 
                 {/* Popup direkt unter dem Button */}
-                {isOpen && (
-                    <div
-                        ref={calendarRef}
-                        className="lg:absolute relative top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50 w-80"
+                {isOpen && isClient && typeof window !== "undefined" && createPortal(
+    <CalendarModal onClose={() => setIsOpen(false)}>
+        <div ref={calendarRef}>
+            {/* Monat & Navigation */}
+            <div className="flex justify-between items-center mb-4 text-black">
+                <div className="font-bold text-lg">{formatMonthYear(currentMonth)}</div>
+                <div className="flex gap-2">
+                    <button onClick={prevMonth} className="text-black hover:text-blue-600">←</button>
+                    <button onClick={nextMonth} className="text-black hover:text-blue-600">→</button>
+                </div>
+                </div>
+
+            {/* Wochentage */}
+            <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(day => (
+                    <div key={day} className="text-gray-600">{day}</div>
+                ))}
+            </div>
+
+            {/* Kalendertage */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+                {generateCalendarDays().map((day, index) => (
+                    <button
+                        key={index}
+                        onClick={() => handleDateClick(day.date)}
+                        className={`h-8 w-8 flex items-center justify-center rounded-sm ${
+                            isSelectedDate(day.date)
+                                ? 'bg-blue-500 text-white'
+                                : day.month === 'current'
+                                    ? 'text-black hover:bg-gray-100'
+                                    : 'text-gray-400 hover:bg-gray-100'
+                        } ${isToday(day.date) && !isSelectedDate(day.date) ? 'font-bold' : ''}`}
                     >
-                        {/* Monat & Navigation */}
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="font-bold">{formatMonthYear(currentMonth)}</div>
-                            <div className="flex gap-2">
-                                <button onClick={prevMonth}>←</button>
-                                <button onClick={nextMonth}>→</button>
-                            </div>
-                        </div>
+                        {day.day}
+                    </button>
+                ))}
+            </div>
 
-                        {/* Wochentage */}
-                        <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                            {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(day => (
-                                <div key={day} className="text-gray-600">{day}</div>
-                            ))}
-                        </div>
-
-                        {/* Kalendertage */}
-                        <div className="grid grid-cols-7 gap-1 text-center">
-                            {generateCalendarDays().map((day, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handleDateClick(day.date)}
-                                    className={`h-8 w-8 flex items-center justify-center rounded-sm ${
-                                        isSelectedDate(day.date)
-                                            ? 'bg-blue-500 text-white'
-                                            : day.month === 'current'
-                                                ? 'text-black hover:bg-gray-100'
-                                                : 'text-gray-400 hover:bg-gray-100'
-                                    } ${isToday(day.date) && !isSelectedDate(day.date) ? 'font-bold' : ''}`}
-                                >
-                                    {day.day}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex justify-between mt-4">
-                            <button
-                                onClick={handleClear}
-                                className="text-blue-500 hover:underline"
-                            >
-                                Löschen
-                            </button>
-                            <button
-                                onClick={handleToday}
-                                className="text-blue-500 hover:underline"
-                            >
-                                Heute
-                            </button>
-                        </div>
-                    </div>
-                )}
+            {/* Footer */}
+            <div className="flex justify-between mt-6">
+                <button onClick={handleClear} className="text-blue-500 hover:underline">
+                    Löschen
+                </button>
+                <button onClick={handleToday} className="text-blue-500 hover:underline">
+                    Heute
+                </button>
+            </div>
+        </div>
+    </CalendarModal>
+, document.body)}
             </div>
         </div>
     );
