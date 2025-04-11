@@ -37,7 +37,6 @@ export default function GroupResults() {
                 .select("name")
                 .eq("code", sport)
                 .single();
-
             if (!error) setSportName(data.name);
         };
 
@@ -58,7 +57,7 @@ export default function GroupResults() {
             const numAttempts = sportConfig.attempts || 3;
 
             setStudents(data);
-            setFilteredStudents(data);
+
 
             const initialSkipped = {};
             const initialAttemptHeights = {};
@@ -269,8 +268,32 @@ export default function GroupResults() {
             const matches = !searchQuery || `${student.vorname} ${student.nachname}`.toLowerCase().includes(searchQuery.toLowerCase());
             return present && notHelper && matches;
         });
+
+        result.sort((a, b) => {
+            const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+            const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+
         setFilteredStudents(result);
     }, [searchQuery, students]);
+
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (!saved && students.length > 0) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+        };
+    }, [saved, students]);
+
+
 
     return (
         <div className="wrapper-container p-4">
@@ -312,12 +335,6 @@ export default function GroupResults() {
                             className="w-full pl-10 pr-4 py-3 border border-blue-600 rounded-md text-gray-900 placeholder-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
                         />
                         </div>
-                <button
-                    className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium text-gray-800"
-                    onClick={() => setShowScale(true)}
-                >
-                    📋 Punkteskala anzeigen
-                </button>
 
                 <div className="flex-grow overflow-y-auto flex flex-col gap-4">
                     {filteredStudents.map((student, index) => (
