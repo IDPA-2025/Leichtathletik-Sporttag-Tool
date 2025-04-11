@@ -75,49 +75,75 @@ export default function GroupOverview() {
 
     return (
         <div className="wrapper-container h-screen flex flex-col">
-            <div className="transparent-container flex flex-col items-center w-full">
-
-                {/* Gruppen Auswahl Titel */}
-                <div className="w-full py-6 flex items-center justify-center rounded-t-lg">
-                    <h1 className="text-4xl font-light text-gray-900">
-                        Gruppen für {sportName || sport}
-                    </h1>
-                </div>
-
-                {/* Responsive Grid für Gruppen */}
-                <div className="w-full flex-1 flex justify-center items-center p-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
-                        {groups.map(({ id, klasse, geschlecht }) => (
-                            <div
-                                key={id}
-                                onClick={() => toggleGroup(id)}
-                                className={`cursor-pointer relative aspect-square border-2 ${
-                                    selectedGroups.includes(id) ? 'border-blue-600 bg-blue-50' : 'border-green-500'
-                                } rounded-lg transition flex flex-col items-center justify-center p-4`}
-                            >
-                                <p className="text-gray-700 text-xl md:text-2xl font-semibold text-center">{klasse}</p>
-                                <div
-                                    className={`absolute bottom-0 right-0 w-0 h-0 border-b-[20px] border-l-[20px] sm:border-l-[50px] sm:border-b-[50px] border-transparent rounded-br-md ${geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'}`}></div>
-                            </div>
-
-                        ))}
-                    </div>
-                    {selectedGroups.length > 0 && (
-                        <div className="mt-6">
-                            <button
-                                onClick={handleGoToResults}
-                                className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold"
-                            >
-                                Ergebnisse anzeigen ({selectedGroups.length} Gruppen)
-                            </button>
-                        </div>
-                    )}
-
-                </div>
-
+          <div className="transparent-container flex flex-col items-center w-full">
+      
+            {/* Titel */}
+            <div className="w-full py-6 flex items-center justify-center rounded-t-lg">
+              <h1 className="text-4xl font-light text-gray-900">
+                Gruppen für {sportName || sport}
+              </h1>
             </div>
-            <BackButton/>
-
+      
+            {/* Gruppenansicht + Immer sichtbarer Button */}
+            <div className="w-full flex-1 flex flex-col items-center justify-start p-4">
+              {/* Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
+                {groups.map(({ id, klasse, geschlecht }) => (
+                  <div
+                    key={id}
+                    onClick={() => toggleGroup(id)}
+                    className={`cursor-pointer relative aspect-square border-2 ${
+                      selectedGroups.includes(id) ? 'border-blue-600 bg-blue-50' : 'border-green-500'
+                    } rounded-lg transition flex flex-col items-center justify-center p-4`}
+                  >
+                    <p className="text-gray-700 text-xl md:text-2xl font-semibold text-center">
+                      {klasse}
+                    </p>
+                    <div
+                      className={`absolute bottom-0 right-0 w-0 h-0 border-b-[20px] border-l-[20px] sm:border-l-[50px] sm:border-b-[50px] border-transparent rounded-br-md ${
+                        geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'
+                      }`}
+                    ></div>
+                  </div>
+                ))}
+              </div>
+      
+              {/* Immer sichtbarer Button */}
+              <div className="mt-10 flex justify-center w-full">
+                <button
+                  onClick={handleGoToResults}
+                  disabled={selectedGroups.length === 0}
+                  className={`group relative inline-flex items-center gap-2 rounded-lg border px-6 py-2 transition-all duration-200 focus:outline-none
+                    ${
+                      selectedGroups.length === 0
+                        ? 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100'
+                        : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md'
+                    }`}
+                >
+                  <span className="relative z-10 transition-colors duration-200 group-hover:text-inherit">
+                    Ergebnisse anzeigen ({selectedGroups.length} Gruppen)
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 transform
+                      ${
+                        selectedGroups.length === 0
+                          ? 'text-gray-400'
+                          : 'group-hover:translate-x-1 group-hover:text-white'
+                      }`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+      
+          {/* Back Button unten */}
+          <BackButton />
         </div>
-    )
+      )
 }

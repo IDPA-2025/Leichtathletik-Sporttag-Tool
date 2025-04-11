@@ -40,7 +40,7 @@ export default function Home() {
     {
       id: 3,
       name: "Devin Mugglin",
-      designation: "Chief of Testing / mobiler Nebelproduzent",
+      designation: "Chief of Testing / aromatischer Zwischenmoment-Kurator",
       image: "https://qcxsrkpddxkljwaiqyux.supabase.co/storage/v1/object/sign/images/devin.JPG?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWFnZXMvZGV2aW4uSlBHIiwiaWF0IjoxNzQ0MjA2Mzg2LCJleHAiOjIwMjgwMzAzODZ9.5Wmt7DL5TTb6Tc-xv88FJYzm8Knqo2gCEbQn36QMyew",
       github: "https://github.com/de27vin/",
     }
