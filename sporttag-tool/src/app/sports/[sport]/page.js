@@ -28,7 +28,7 @@ export default function GroupOverview() {
     useEffect(() => {
         const fetchGroups = async () => {
             try {
-                const res = await fetch("/api/students/groups");
+                const res = await fetch("/api/students/groups", {credentials: "include",});
                 const json = await res.json();
                 if (!res.ok) throw new Error(json.error);
 
@@ -51,7 +51,7 @@ export default function GroupOverview() {
     useEffect(() => {
         const fetchSportName = async () => {
             try {
-                const res = await fetch(`/api/sports?sport=${sport}`);
+                const res = await fetch(`/api/sports?sport=${sport}`, {credentials: "include",});
                 const json = await res.json();
                 if (!res.ok) throw new Error(json.error);
                 setSportName(json.data.name);

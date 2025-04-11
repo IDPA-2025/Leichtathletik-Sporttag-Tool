@@ -37,7 +37,7 @@ export default function UploadPage() {
 
   const fetchClasses = async () => {
     try {
-      const response = await fetch("/api/students/classes");
+      const response = await fetch("/api/students/classes", {credentials: "include",});
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unbekannter Fehler");
       setClasses(result.classes);
@@ -141,6 +141,7 @@ export default function UploadPage() {
     try {
       const res = await fetch("/api/students/upload", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedStudents),
       });
@@ -184,6 +185,7 @@ export default function UploadPage() {
     try {
       const response = await fetch("/api/students/delete", {
         method: "DELETE",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -208,7 +210,7 @@ export default function UploadPage() {
 
   const handleEditClass = async (cls) => {
     try {
-      const response = await fetch(`/api/students/by-class?klasse=${cls}`);
+      const response = await fetch(`/api/students/by-class?klasse=${cls}`, {credentials: "include",});
       const json = await response.json();
 
       if (!response.ok || !json.data) {

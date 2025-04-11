@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabaseClient";
-import {requireAnyRole} from "@/app/lib/auth";
+import { requireAnyRole } from "@/app/lib/auth";
 
 export async function POST(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
@@ -16,6 +16,7 @@ export async function POST(req) {
             return new Response(JSON.stringify({ error: message }), { status: 500 });
         }
 
+        // Ergebnisse gruppieren
         const studentResultsMap = results.reduce((acc, r) => {
             if (!acc[r.student_id]) acc[r.student_id] = [];
             acc[r.student_id].push(r);
@@ -28,10 +29,8 @@ export async function POST(req) {
             const { id, total_points, age_category, geschlecht } = student;
             const studentResults = studentResultsMap[id] || [];
 
-            // Prüfe, ob mindestens eine Sportart übersprungen wurde.
             const hasSkipped = studentResults.some(r => r.skipped === true);
-
-            let finalGrade;
+            let finalGrade = null;
 
             if (hasSkipped) {
                 const validGrades = studentResults
@@ -39,34 +38,28 @@ export async function POST(req) {
                     .map(r => r.grade);
 
                 if (validGrades.length > 0) {
-                    const sumGrades = validGrades.reduce((sum, grade) => sum + grade, 0);
-                    finalGrade = parseFloat((sumGrades / validGrades.length).toFixed(2));
-                    console.log(`Student ${id}: Durchschnittsnote berechnet =`, finalGrade);
+                    const avg = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
+                    finalGrade = parseFloat(avg.toFixed(2));
+                    console.log(`🔁 ${id}: Durchschnittsnote berechnet = ${finalGrade}`);
                 } else {
-                    console.warn(`Student ${id}: Keine gültigen Noten verfügbar.`);
-                    finalGrade = null;
+                    console.warn(`⚠️ ${id}: Keine gültigen Noten – Fallback auf 1`);
+                    finalGrade = 1;
                 }
             } else {
                 const passendeGrades = grades
                     .filter(g => g.gender === geschlecht && g.age_category === age_category)
                     .sort((a, b) => b.points_min - a.points_min);
 
-                if (passendeGrades.length === 0) {
-                    console.warn(`Keine Notendefinition für ${geschlecht}, ${age_category}`);
-                    continue;
-                }
+                const passende = passendeGrades.find(g => total_points >= g.points_min);
+                finalGrade = passende?.grade ?? 1;
 
-                finalGrade = passendeGrades.find(g => total_points >= g.points_min)?.grade
-                    || passendeGrades[passendeGrades.length - 1].grade;
-
-                console.log(`Student ${id}: Note laut Tabelle =`, finalGrade);
+                console.log(`📊 ${id}: Note laut Tabelle = ${finalGrade}`);
             }
 
-            if (finalGrade !== null) {
-                updates.push({ id, grade: finalGrade });
-            }
+            updates.push({ id, grade: finalGrade });
         }
 
+        // Supabase Updates ausführen
         for (const update of updates) {
             const { error } = await supabase
                 .from("students")
@@ -74,14 +67,14 @@ export async function POST(req) {
                 .eq("id", update.id);
 
             if (error) {
-                console.error(`Fehler beim Aktualisieren von ID ${update.id}:`, error);
+                console.error(`❌ Fehler beim Aktualisieren von ID ${update.id}:`, error);
                 return new Response(JSON.stringify({ error: error.message }), { status: 500 });
             }
         }
 
         return new Response(JSON.stringify({ success: true, updated: updates.length }), { status: 200 });
     } catch (err) {
-        console.error("Unerwarteter Fehler in grade-calculation:", err);
+        console.error("🚨 Unerwarteter Fehler:", err);
         return new Response(JSON.stringify({ error: "Interner Fehler" }), { status: 500 });
     }
 }

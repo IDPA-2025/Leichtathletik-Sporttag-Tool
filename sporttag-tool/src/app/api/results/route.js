@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
-import {requireAnyRole} from "@/app/lib/auth";
+import { requireAnyRole } from "@/app/lib/auth";
 
 function getBestResult(scoresRaw, heightsRaw, resultsRaw, config) {
     const scores = Array.isArray(scoresRaw) ? scoresRaw : [];
@@ -23,28 +23,31 @@ function getBestResult(scoresRaw, heightsRaw, resultsRaw, config) {
 }
 
 async function fetchPointData({ geschlecht, sportCode, bestResult, timeMeasure }) {
-    const operator = timeMeasure ? "gte" : "lte";
-    const fallbackOperator = timeMeasure ? "gt" : "lt";
+    console.log(`[fetchPointData] Suche Punktzahl für ${geschlecht}, ${sportCode}, Ergebnis: ${bestResult}`);
 
-    let response = await supabase
+    const response = await supabase
         .from("points_table")
-        .select("punkte")
+        .select("leistung, punkte")
         .eq("geschlecht", geschlecht)
         .eq("sport_code", sportCode)
         .order("leistung", { ascending: timeMeasure });
 
-    if (response.error) throw response.error;
+    if (response.error) {
+        console.error("[fetchPointData] Fehler:", response.error);
+        throw response.error;
+    }
 
-    const sorted = response.data.filter(row => {
-        return timeMeasure ? row.leistung >= bestResult : row.leistung <= bestResult;
-    });
+    const sorted = response.data.filter(row =>
+        timeMeasure ? row.leistung >= bestResult : row.leistung <= bestResult
+    );
 
+    console.log("[fetchPointData] Gefundene Punktdaten:", sorted[0]);
     return sorted.length > 0 ? [sorted[0]] : [];
 }
 
 export async function POST(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
-
+    console.log("🔐 Zugriff durch:", user);
 
     const body = await req.json();
     const { students, sport, group, skippedStudents, attemptHeights, results, scores, sportConfig } = body;
@@ -52,57 +55,64 @@ export async function POST(req) {
     try {
         const { data: studentInfos, error: studentFetchError } = await supabase
             .from("students")
-            .select("id, geschlecht, age_category")
+            .select("id, geschlecht, age_category, klasse")
             .in("id", students.map(s => s.id));
 
         if (studentFetchError) throw studentFetchError;
 
         for (const student of students) {
             const studentInfo = studentInfos.find(s => s.id === student.id);
-            if (!studentInfo) continue;
+            if (!studentInfo) {
+                console.warn(`❌ Kein Profil gefunden für ID ${student.id}`);
+                continue;
+            }
 
             const isSkipped = !!skippedStudents[student.id];
             const bestResult = getBestResult(scores[student.id], attemptHeights[student.id], results[student.id], sportConfig);
-            const geschlecht = studentInfo.geschlecht;
-            const sportCode = sport;
+            console.log(`👟 [${student.id}] Bestleistung:`, bestResult);
 
             let pointData = bestResult === 0
                 ? [{ punkte: null }]
-                : await fetchPointData({ geschlecht, sportCode, bestResult, timeMeasure: sportConfig.time_measure });
+                : await fetchPointData({
+                    geschlecht: studentInfo.geschlecht,
+                    sportCode: sport,
+                    bestResult,
+                    timeMeasure: sportConfig.time_measure
+                });
 
-            const punkte = pointData.length > 0 ? pointData[0].punkte : null;
+            const punkte = pointData.length > 0 ? pointData[0].punkte : 0;
+            console.log(`🎯 [${student.id}] Punkte:`, punkte);
 
             let note = null;
-
             if (!isSkipped && punkte !== null) {
                 const { data: gradeData, error: gradeError } = await supabase
                     .from("grades_table")
                     .select("grade")
-                    .eq("gender", geschlecht)
+                    .eq("gender", studentInfo.geschlecht)
                     .eq("age_category", studentInfo.age_category)
                     .lte("average_points_per_category", punkte)
                     .order("average_points_per_category", { ascending: false })
                     .limit(1);
 
                 if (gradeError) throw gradeError;
-
-                if (gradeData.length > 0) {
-                    note = gradeData[0].grade;
-                }
+                note = gradeData[0]?.grade ?? 1;
+                console.log(`📝 [${student.id}] Note:`, note);
             }
 
             const update = {
                 student_id: student.id,
                 sport,
-                group,
+                group: `${studentInfo.klasse}-${studentInfo.geschlecht}`,
                 heights: sportConfig.checkFails ? attemptHeights[student.id] : null,
                 attempt_results: sportConfig.checkFails ? results[student.id] : null,
                 scores: !sportConfig.checkFails ? scores[student.id] : null,
                 best_result: isSkipped ? null : bestResult,
                 points: isSkipped ? null : punkte,
                 skipped: isSkipped,
-                grade: isSkipped ? null : note,
+                grade: isSkipped ? null : note
             };
+
+            console.log("💾 Speichere Resultat für", student.id, update);
 
             const { data: existingData, error: fetchError } = await supabase
                 .from("results")
@@ -117,12 +127,18 @@ export async function POST(req) {
                 ? await supabase.from("results").update(update).eq("id", existingData.id)
                 : await supabase.from("results").insert(update);
 
-            if (upsertError) throw upsertError;
+            if (upsertError) {
+                console.error(`❌ Fehler beim Speichern von ${student.id}:`, upsertError);
+                throw upsertError;
+            }
+
+            console.log(`✅ [${student.id}] Ergebnis gespeichert`);
         }
 
         return new Response(JSON.stringify({ success: true }), { status: 200 });
+
     } catch (e) {
-        console.error(e);
+        console.error("🚨 Fehler beim Speichern der Resultate:", e);
         return new Response(JSON.stringify({ error: "Fehler beim Speichern." }), { status: 500 });
     }
 }

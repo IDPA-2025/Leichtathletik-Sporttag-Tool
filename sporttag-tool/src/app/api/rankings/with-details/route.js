@@ -32,6 +32,10 @@ export async function GET(req) {
         if (sportsError) {
             throw new Error("Fehler beim Laden der Sportarten: " + sportsError.message);
         }
+        console.log("Alterkategorien Rohdaten:", students.map(s => ({
+            id: s.id,
+            age_category: s.age_category
+        })));
 
         // Punkte pro Schüler berechnen und speichern (optional, falls noch nicht geschehen)
         const punkteMap = new Map();
@@ -57,7 +61,7 @@ export async function GET(req) {
             geschlecht: s.geschlecht,
             alter: s.alter,
             kategorie: s.age_category,
-            total_points: punkteMap.get(s.id) || 0,
+            total_points: s.total_points || 0,
             grade: s.grade,
             helfer: s.helfer,
             anwesend: s.anwesend

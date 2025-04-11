@@ -21,7 +21,9 @@ export default function ExportPopup({ onClose }) {
     useEffect(() => {
         const fetchKlassen = async () => {
             try {
-                const response = await fetch("/api/students/classes");
+                const response = await fetch("/api/students/classes", {
+                    credentials: "include",
+                });
                 if (!response.ok) throw new Error("Fehler beim Laden der Klassen");
                 const data = await response.json();
                 setKlassen(data.classes || []);
@@ -54,6 +56,7 @@ export default function ExportPopup({ onClose }) {
                 setIsGenerating(true);
                 const response = await fetch("/api/export/generate-pdf", {
                     method: "POST",
+                    credentials: "include",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         exportData,
@@ -82,6 +85,7 @@ export default function ExportPopup({ onClose }) {
                 setIsGenerating(true);
                 const response = await fetch("/api/export/generate-csv", {
                     method: "POST",
+                    credentials: "include",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         exportData,
@@ -110,6 +114,7 @@ export default function ExportPopup({ onClose }) {
                 setIsGenerating(true);
                 const response = await fetch("/api/export/generate-excel", {
                     method: "POST",
+                    credentials: "include",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         exportData,
@@ -144,6 +149,7 @@ export default function ExportPopup({ onClose }) {
             // Alle Parameter an die API übergeben
             const res = await fetch("/api/rankings/generate", {
                 method: "POST",
+                credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     mode,
@@ -178,6 +184,8 @@ export default function ExportPopup({ onClose }) {
 
             const response = await fetch("/api/students/calculate-grade", {
                 method: "POST",
+                credentials: "include",
+                body: JSON.stringify({ filters }),
                 headers: { "Content-Type": "application/json" }
             });
 

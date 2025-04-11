@@ -12,7 +12,7 @@ export default function SportsOverview() {
 
     const fetchSports = async () => {
         try {
-            const res = await fetch("/api/sports/all");
+            const res = await fetch("/api/sports/all", {credentials: "include",});
             const json = await res.json();
             if (!res.ok) throw new Error(json.error);
             setSports(json.data);

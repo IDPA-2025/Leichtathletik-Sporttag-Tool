@@ -11,7 +11,7 @@ export function RoleProvider({ children }) {
     useEffect(() => {
         const fetchRole = async () => {
             try {
-                const res = await fetch("/api/me");
+                const res = await fetch("/api/me",{credentials: "include",});
                 const data = await res.json();
                 setRole(data.role || null);
             } catch {

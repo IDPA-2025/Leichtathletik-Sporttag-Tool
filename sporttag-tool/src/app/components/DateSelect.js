@@ -27,6 +27,7 @@ useEffect(() => {
     const saveDateToDatabase = async (date) => {
         const response = await fetch("/api/sportday/update-date", {
             method: "POST",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ date }),
         });
@@ -109,7 +110,7 @@ useEffect(() => {
         await saveDateToDatabase(date.toLocaleDateString("sv-SE")); // yyyy-mm-dd Format
 
         // Triggere Alterskategorien-Neuberechnung
-        const response = await fetch("/api/students/recalculate-age", { method: "POST" });
+        const response = await fetch("/api/students/recalculate-age", { method: "POST", credentials: "include",});
         if (!response.ok) {
             const result = await response.json().catch(() => ({}));
             console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
@@ -129,7 +130,7 @@ useEffect(() => {
         await saveDateToDatabase(today.toLocaleDateString("sv-SE"));
 
         // Alterskategorien neu berechnen
-        const response = await fetch("/api/students/recalculate-age", { method: "POST" });
+        const response = await fetch("/api/students/recalculate-age", { method: "POST", credentials: "include",});
         if (!response.ok) {
             const result = await response.json().catch(() => ({}));
             console.error("Fehler beim Aktualisieren der Alterskategorien:", result?.error || "Unbekannter Fehler");
@@ -173,7 +174,7 @@ useEffect(() => {
 
     useEffect(() => {
         const fetchDate = async () => {
-            const response = await fetch("/api/sportday/get-date");
+            const response = await fetch("/api/sportday/get-date", {credentials: "include",});
             console.log("Response:", response);
             const result = await response.json();
             if (response.ok && result.date) {

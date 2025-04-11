@@ -1,21 +1,26 @@
-// /api/rankings/generate/route.js
-
 import {requireAnyRole} from "@/app/lib/auth";
 
 export async function POST(req) {
-    const user = requireAnyRole(req, ["teacher"]);
 
     try {
+        const user = requireAnyRole(req, ["teacher"]);
         const { mode, preset, filters, showDetails, showGrades } = await req.json();
 
-        // Daten laden
-        const rankingsRes = await fetch(`${process.env.INTERNAL_API_URL}/api/rankings/with-details`);
+        const cookie = req.headers.get("cookie");
+
+        const rankingsRes = await fetch(`${process.env.INTERNAL_API_URL}/api/rankings/with-details`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Cookie": cookie
+            }
+        });
+
         if (!rankingsRes.ok) throw new Error("Fehler beim Laden der Rankings");
 
         const json = await rankingsRes.json();
         const { rankings, results, sports, students: studentDetails } = json;
 
-        // Ergebnisse verarbeiten (aus dem Frontend-Code hierher verschoben)
         const studentMap = {};
         for (const student of studentDetails) {
             studentMap[student.id] = student;
@@ -43,6 +48,8 @@ export async function POST(req) {
         let listen = {};
 
         if (mode === "preset") {
+            console.log("🔑 Rankings-Keys:", Object.keys(rankings));
+
             for (const [key, list] of Object.entries(rankings)) {
                 let rankCounter = 1;
                 listen[key] = list
@@ -50,7 +57,7 @@ export async function POST(req) {
                         ...s,
                         vorname: s.vorname,
                         nachname: s.nachname,
-                        total_points: s.total_points || 0,
+                        total_points: studentMap[s.id]?.total_points || 0,
                         grade: studentMap[s.id]?.grade,
                         resultDetails: resultsMap[s.id] || {},
                         helfer: studentMap[s.id]?.helfer,
@@ -74,16 +81,34 @@ export async function POST(req) {
                         return student;
                     });
 
+                const formatAgeCategory = (kat) => {
+                    switch (kat) {
+                        case "-15":
+                            return "bis 15";
+                        case "16-17":
+                            return "16 bis 17";
+                        case "18+":
+                            return "18+";
+                        default:
+                            return "Unbekannt";
+                    }
+                };
+
                 if (preset === "preset1") {
-                    const [kategorie, geschlecht] = key.split("-");
-                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${kategorie.replace("unter16", "bis 15").replace("16bis17", "16 bis 17").replace("ueber18", "18+")}`;
+                    const parts = key.split("-");
+                    const geschlecht = parts.at(-1);
+                    const kategorie = parts.slice(0, -1).join("-");
+
+                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${formatAgeCategory(kategorie)}`;
                 } else if (preset === "preset2") {
-                    const [klasse, geschlecht] = key.split("-");
+                    const parts = key.split("-");
+                    const geschlecht = parts.at(-1);
+                    const klasse = parts.slice(0, -1).join("-");
+
                     titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${klasse}`;
                 }
             }
         } else {
-            // Benutzerdefinierte Filter
             let allStudents = [];
             for (const list of Object.values(rankings)) {
                 allStudents = [...allStudents, ...list];
@@ -93,7 +118,7 @@ export async function POST(req) {
                 ...s,
                 vorname: s.vorname,
                 nachname: s.nachname,
-                total_points: s.total_points || 0,
+                total_points: studentMap[s.id]?.total_points || 0,
                 grade: studentMap[s.id]?.grade,
                 resultDetails: resultsMap[s.id] || {},
                 helfer: studentMap[s.id]?.helfer,
@@ -101,16 +126,21 @@ export async function POST(req) {
             }));
 
             let filteredStudents = allStudents;
+            console.log("All students count:", allStudents.length);
+            console.log("Sample student data:", allStudents.length > 0 ? allStudents[0] : "No students");
+
             if (filters.geschlecht !== "alle") {
+                console.log("Filtering by gender:", filters.geschlecht);
                 filteredStudents = filteredStudents.filter(s => s.geschlecht === filters.geschlecht);
+                console.log("After gender filter count:", filteredStudents.length);
             }
 
+// Similar logs for other filters
+
             if (filters.altersgruppe !== "alle") {
-                filteredStudents = filteredStudents.filter(s => {
-                    if (filters.altersgruppe === "-15") return s.alter < 16;
-                    if (filters.altersgruppe === "16-17") return s.alter >= 16 && s.alter <= 17;
-                    return s.alter > 17;
-                });
+                console.log("Filtering by age category:", filters.altersgruppe);
+                filteredStudents = filteredStudents.filter(s => s.kategorie === filters.altersgruppe);
+                console.log("After age filter count:", filteredStudents.length);
             }
 
             if (filters.klasse !== "alle") {
@@ -151,7 +181,6 @@ export async function POST(req) {
             titles["Benutzerdefiniert"] = `Rangliste für ${geschlechtText} in ${altersText}, ${klasseText}`;
         }
 
-        // Sammle alle verwendeten Sport-Codes
         const allSports = new Set();
         for (const studentId in resultsMap) {
             for (const sport in resultsMap[studentId]) {
@@ -161,7 +190,6 @@ export async function POST(req) {
 
         const sportHeaders = Array.from(allSports);
 
-        // Gib alle Daten zurück, die für Export benötigt werden
         return Response.json({
             ranglisten: listen,
             titles,

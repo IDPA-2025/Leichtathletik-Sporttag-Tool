@@ -12,7 +12,7 @@ export default function BackButton() {
     useEffect(() => {
         const fetchRole = async () => {
             try {
-                const res = await fetch("/api/me", { cache: "no-store" });
+                const res = await fetch("/api/me", { cache: "no-store",                 credentials: "include",});
                 if (!res.ok) {
                     if (res.status === 403) {
                         router.push("/login");
