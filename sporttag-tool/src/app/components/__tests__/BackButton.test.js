@@ -2,6 +2,15 @@
  * @jest-environment jsdom
  */
 
+/**
+ * Was alles getestet wird:
+ * rendert den zurück-Knopf, 
+ * callt router.back() wenn der zurück-Knopf gedrückt wird, 
+ * zeigt den export-Knopf nicht wenn man nicht die Rolle Lehrer hat, 
+ * zeigt den export-Knopf wenn man die Rolle Lehrer hat, 
+ * zeigt export popup wenn man den export-Knopf klickt
+ */
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import BackButton from '@/app/components/BackButton';
 import { useRouter } from 'next/navigation';
