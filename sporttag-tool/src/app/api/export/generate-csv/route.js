@@ -1,7 +1,12 @@
 // /api/export/generate-csv/route.js
-export async function POST(request) {
+import {requireAnyRole} from "@/app/lib/auth";
+
+export async function POST(req) {
+
+    const user = requireAnyRole(req, ["teacher"]);
+
     try {
-        const { exportData, showDetails, showGrades } = await request.json();
+        const { exportData, showDetails, showGrades } = await req.json();
         const { ranglisten, titles, sportHeaders, sportUnitMap, sportNameMap } = exportData;
 
         // Die formatDisziplinZelle Funktion aus dem Frontend

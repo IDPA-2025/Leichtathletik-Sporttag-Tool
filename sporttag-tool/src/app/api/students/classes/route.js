@@ -1,7 +1,10 @@
 // File: /app/api/students/classes/route.js
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
-export async function GET() {
+export async function GET(req) {
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
+
     const { data, error } = await supabase
         .from("students")
         .select("klasse")

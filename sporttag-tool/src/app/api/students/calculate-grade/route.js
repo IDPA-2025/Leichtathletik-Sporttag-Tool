@@ -1,6 +1,9 @@
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
-export async function POST() {
+export async function POST(req) {
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
+
     try {
         const [{ data: students, error: studentError }, { data: grades, error: gradesError }, { data: results, error: resultsError }] = await Promise.all([
             supabase.from("students").select("id, total_points, age_category, geschlecht").not("total_points", "is", null),

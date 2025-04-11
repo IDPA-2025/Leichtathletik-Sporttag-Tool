@@ -1,9 +1,12 @@
 import { supabase } from "../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const sport = searchParams.get("sport");
     const geschlecht = searchParams.get("geschlecht");
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
+
 
     if (!sport || !geschlecht) {
         return new Response(JSON.stringify({ error: "sport und geschlecht sind erforderlich." }), { status: 400 });

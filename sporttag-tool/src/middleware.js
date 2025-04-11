@@ -1,40 +1,52 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
+
+const PUBLIC_PATHS = ['/', '/login']
 
 export function middleware(req) {
+    const { pathname } = req.nextUrl
+    const tokenCookie = req.cookies.get('authToken')
 
-    const tokenCookie = req.cookies.get("authToken");
+    // ✅ Öffentliche Pfade erlauben
+    if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+        return NextResponse.next()
+    }
 
+    // ❌ Kein Token vorhanden → Weiterleitung zu /login
     if (!tokenCookie) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        return NextResponse.redirect(new URL('/login', req.url))
     }
 
     try {
-        const token = tokenCookie.value;
+        const token = tokenCookie.value
+        const payloadBase64 = token.split('.')[1]
+        const decoded = JSON.parse(Buffer.from(payloadBase64, 'base64').toString())
 
-        // JWT manuell decodieren (Edge Runtime kompatibel)
-        const payloadBase64 = token.split('.')[1]; // JWT besteht aus Header.Payload.Signatur
-        const decoded = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+        const userRole = decoded.role
 
-
-        if (req.nextUrl.pathname.startsWith("/upload") && decoded.role !== "lehrer") {
-            return NextResponse.redirect(new URL("/menu", req.url));
+        // 🛑 Upload-Zugriff nur für Lehrer
+        if (pathname.startsWith('/upload') && userRole !== 'teacher') {
+            // Custom Header: Zugriff verweigert
+            const response = NextResponse.next()
+            response.headers.set('X-Access-Denied', 'true')
+            return response
         }
 
-        // **Wenn Helfer auf /upload zugreifen will → Kein Redirect, aber Header setzen**
-        if (req.nextUrl.pathname.startsWith("/upload") && decoded.role !== "lehrer") {
 
-            const response = NextResponse.next();
-            response.headers.set("X-Access-Denied", "true"); // Custom Header setzen
-            return response;
-        }
 
-        return NextResponse.next();
+        // ✅ Zugriff erlaubt
+        return NextResponse.next()
+
     } catch (error) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        // Fehler beim JWT → Weiterleitung zu Login
+        return NextResponse.redirect(new URL('/login', req.url))
     }
 }
 
-// Middleware aktivieren
+// 👇 Middleware aktiv für:
 export const config = {
-    matcher: ["/menu","/sports/:path*", "/upload"], // Middleware für diese Routen aktivieren
-};
+    matcher: [
+        '/menu',
+        '/sports/:path*',
+        '/upload',
+    ],
+}

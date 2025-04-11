@@ -1,6 +1,9 @@
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
 export async function POST(req) {
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
+
     const body = await req.json();
     const { studentIds, sport } = body;
 

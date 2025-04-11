@@ -75,7 +75,7 @@ describe('BackButton', () => {
   test('shows export button if role is lehrer', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ role: 'lehrer' }),
+      json: async () => ({ role: 'teacher' }),
     });
 
     render(<BackButton />);
@@ -85,7 +85,7 @@ describe('BackButton', () => {
   test('shows export popup on export button click', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ role: 'lehrer' }),
+      json: async () => ({ role: 'teacher' }),
     });
 
     render(<BackButton />);

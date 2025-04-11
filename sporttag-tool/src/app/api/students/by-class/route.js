@@ -1,7 +1,9 @@
 // 📁 /app/api/students/by-class/route.js
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
 export async function GET(req) {
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
     const { searchParams } = new URL(req.url);
     const klasse = searchParams.get("klasse");
 

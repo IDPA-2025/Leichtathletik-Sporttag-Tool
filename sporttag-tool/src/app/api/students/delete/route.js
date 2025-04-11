@@ -1,6 +1,8 @@
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
 export async function DELETE(req) {
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
     const { klasse } = await req.json();
 
     if (!klasse) {

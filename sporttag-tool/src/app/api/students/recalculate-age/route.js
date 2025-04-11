@@ -1,5 +1,6 @@
 // File: /app/api/students/recalculate-age/route.js
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
 function calculateAgeCategory(geburtsdatum, veranstaltungsDatumStr) {
     const veranstaltungsDatum = new Date(veranstaltungsDatumStr);
@@ -13,7 +14,8 @@ function calculateAgeCategory(geburtsdatum, veranstaltungsDatumStr) {
     return "18+";
 }
 
-export async function POST() {
+export async function POST(req) {
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
     try {
         const { data: sportdayData, error: dateError } = await supabase
             .from("sportdays")

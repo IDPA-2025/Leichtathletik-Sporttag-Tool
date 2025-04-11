@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
 function getBestResult(scoresRaw, heightsRaw, resultsRaw, config) {
     const scores = Array.isArray(scoresRaw) ? scoresRaw : [];
@@ -42,6 +43,9 @@ async function fetchPointData({ geschlecht, sportCode, bestResult, timeMeasure }
 }
 
 export async function POST(req) {
+    const user = requireAnyRole(req, ["teacher", "assistant"]);
+
+
     const body = await req.json();
     const { students, sport, group, skippedStudents, attemptHeights, results, scores, sportConfig } = body;
 

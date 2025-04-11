@@ -8,9 +8,7 @@ export async function POST(req) {
     try {
         const { username, password } = await req.json();
 
-        if (!username || !password) {
-            return NextResponse.json({ error: "Benutzername und Passwort sind erforderlich" }, { status: 400 });
-        }
+
 
         const { data: user, error } = await supabase
             .from('profiles')

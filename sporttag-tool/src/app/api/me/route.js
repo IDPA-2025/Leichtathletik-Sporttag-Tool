@@ -1,4 +1,8 @@
 import jwt from 'jsonwebtoken'
+
+// ⬅️ ZWINGEND bei Verwendung von jsonwebtoken
+export const runtime = 'nodejs'
+
 export async function GET(req) {
     const cookie = req.headers.get("cookie") || "";
     const token = cookie
@@ -12,13 +16,17 @@ export async function GET(req) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
         return new Response(JSON.stringify({
             id: decoded.id,
             username: decoded.username,
             role: decoded.role
-        }), { status: 200 });
-    } catch (err) {
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-        return new Response(JSON.stringify({ error: "Token ungültig" }), { status: 403 });
+    } catch (err) {
+        return new Response(JSON.stringify({ error: "Token ungültig" }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 }

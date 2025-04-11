@@ -45,7 +45,7 @@ export default function BackButton() {
                 </button>
 
                 {/* Exportieren-Button */}
-                {role === "lehrer" && (
+                {role === "teacher" && (
                     <button
                         onClick={() => setShowExport(true)}
                         className="group relative inline-flex items-center gap-2 rounded-lg border border-blue-600 px-5 py-2 text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:shadow-md focus:outline-none bg-white/30"

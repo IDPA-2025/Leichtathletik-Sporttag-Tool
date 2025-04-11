@@ -1,8 +1,11 @@
 // /app/api/sportday/update-date/route.js
 
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
 export async function POST(req) {
+    const user = requireAnyRole(req, ["teacher"]);
+
     const body = await req.json();
     const { date } = body;
 

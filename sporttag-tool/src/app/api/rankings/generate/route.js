@@ -1,9 +1,12 @@
 // /api/rankings/generate/route.js
-import { supabase } from "../../../lib/supabaseClient";
 
-export async function POST(request) {
+import {requireAnyRole} from "@/app/lib/auth";
+
+export async function POST(req) {
+    const user = requireAnyRole(req, ["teacher"]);
+
     try {
-        const { mode, preset, filters, showDetails, showGrades } = await request.json();
+        const { mode, preset, filters, showDetails, showGrades } = await req.json();
 
         // Daten laden
         const rankingsRes = await fetch(`${process.env.INTERNAL_API_URL}/api/rankings/with-details`);

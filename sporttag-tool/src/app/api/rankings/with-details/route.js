@@ -1,7 +1,11 @@
 // /app/api/rankings/with-details/route.js
 import { supabase } from "../../../lib/supabaseClient";
+import {requireAnyRole} from "@/app/lib/auth";
 
-export async function GET() {
+export async function GET(req) {
+    const user = requireAnyRole(req, ["teacher"]);
+
+
     try {
         const { data: students, error: studentError } = await supabase
             .from("students")
