@@ -2,16 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "../../../lib/supabaseClient";
-import { Loader2, CheckCircle } from "lucide-react";
-import BackButton from "@/app/components/BackButton"; // Icon oben im File importieren
-import { ClipboardList } from "lucide-react";
-
-
+import { Loader2, CheckCircle, ClipboardList } from "lucide-react";
+import BackButton from "@/app/components/BackButton";
 
 export default function GroupResults() {
+    // Get URL parameters
     const { sport, group } = useParams();
-    const groupKeys = group.split(","); // z.B. ["1a-maennlich", "2a-weiblich"]
+    const groupKeys = group.split(","); // e.g. ["1a-maennlich", "2a-weiblich"]
+
+    // State management
     const [students, setStudents] = useState([]);
     const [filteredStudents, setFilteredStudents] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -27,26 +26,14 @@ export default function GroupResults() {
     const [isOpen, setIsOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState(null);
 
-
+    // Sport configuration
     const [sportConfig, setSportConfig] = useState({
         attempts: 4,
         unit: '',
         checkFails: false,
     });
 
-    useEffect(() => {
-        const fetchSportName = async () => {
-            const { data, error } = await supabase
-                .from("sports")
-                .select("name")
-                .eq("code", sport)
-                .single();
-            if (!error) setSportName(data.name);
-        };
-
-        fetchSportName();
-    }, [sport]);
-
+    // Fetch students based on group keys
     const fetchStudents = async () => {
         try {
             const response = await fetch(`/api/students?gruppen=${groupKeys.join(",")}`);
@@ -62,7 +49,7 @@ export default function GroupResults() {
 
             setStudents(data);
 
-
+            // Initialize state objects for all students
             const initialSkipped = {};
             const initialAttemptHeights = {};
             const initialResults = {};
@@ -80,20 +67,23 @@ export default function GroupResults() {
             setResults(initialResults);
             setScores(initialScores);
 
+            // Load any existing results
             fetchExistingResults(data.map(s => s.id));
         } catch (err) {
             console.error("Fehler bei fetchStudents:", err);
         }
     };
 
+    // Fetch sport configuration
     const fetchSportConfig = async () => {
-        const { data, error } = await supabase
-            .from("sports")
-            .select("attempts, mesure_unit_short, code, check_fail, time_measure, measure")
-            .eq("code", sport)
-            .single();
+        try {
+            const res = await fetch(`/api/sports?sport=${sport}`);
+            const json = await res.json();
 
-        if (!error) {
+            if (!res.ok) throw new Error(json.error || "Fehler beim Laden der Sport-Konfiguration");
+
+            const data = json.data;
+
             setSportConfig({
                 code: data.code,
                 attempts: data.attempts,
@@ -102,12 +92,16 @@ export default function GroupResults() {
                 time_measure: data.time_measure,
                 measure: data.measure,
             });
+
+            setSportName(data.name);
+        } catch (error) {
+            console.error("Fehler beim Laden der Sportdaten:", error);
         }
     };
 
+    // Fetch point scale data for both genders
     const fetchScale = async () => {
-        const geschlechter = ["maennlich", "weiblich"]; // Immer beide
-
+        const geschlechter = ["maennlich", "weiblich"]; // Always fetch both
         const allData = [];
 
         for (const geschlecht of geschlechter) {
@@ -124,46 +118,51 @@ export default function GroupResults() {
         setPointsData(allData); // [{ geschlecht: ..., data: [...] }, ...]
     };
 
-
-
+    // Fetch existing results for students
     const fetchExistingResults = async (studentIds) => {
-        const { data, error } = await supabase
-            .from("results")
-            .select("*")
-            .eq("sport", sport)
-            .in("student_id", studentIds);
+        try {
+            const res = await fetch("/api/results/results-by-students", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ studentIds, sport }),
+            });
 
-        if (!error && data.length > 0) {
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || "Fehler beim Laden der bestehenden Resultate.");
+
+            const data = json.data;
+            if (!data || data.length === 0) return;
+
             const numAttempts = sportConfig.attempts || 3;
             const loadedAttemptHeights = { ...attemptHeights };
             const loadedResults = { ...results };
             const loadedScores = { ...scores };
+            const loadedSkipped = { ...skippedStudents };
 
+            // Process arrays to ensure they have the correct length
+            const processArray = (arr) =>
+                arr?.length < numAttempts
+                    ? [...arr, ...Array(numAttempts - arr.length).fill("")]
+                    : arr?.slice(0, numAttempts) || Array(numAttempts).fill("");
+
+            // Load existing results into state
             data.forEach(result => {
-                const processArray = (arr) =>
-                    arr?.length < numAttempts
-                        ? [...arr, ...Array(numAttempts - arr.length).fill("")]
-                        : arr?.slice(0, numAttempts) || Array(numAttempts).fill("");
-
                 if (result.heights) loadedAttemptHeights[result.student_id] = processArray(result.heights);
                 if (result.attempt_results) loadedResults[result.student_id] = processArray(result.attempt_results);
                 if (result.scores) loadedScores[result.student_id] = processArray(result.scores);
+                if (result.skipped !== undefined) loadedSkipped[result.student_id] = result.skipped;
             });
 
             setAttemptHeights(loadedAttemptHeights);
             setResults(loadedResults);
             setScores(loadedScores);
-
-            const loadedSkipped = { ...skippedStudents };
-            data.forEach(result => {
-                if (result.skipped !== undefined && result.student_id) {
-                    loadedSkipped[result.student_id] = result.skipped;
-                }
-            });
             setSkippedStudents(loadedSkipped);
+        } catch (err) {
+            console.error("Fehler bei fetchExistingResults:", err);
         }
     };
 
+    // Handle input changes for heights and scores
     const handleInputChange = (studentId, index, value, type) => {
         const setter = type === "height" ? setAttemptHeights : setScores;
 
@@ -173,6 +172,7 @@ export default function GroupResults() {
         }));
     };
 
+    // Handle success/fail result changes
     const handleResultChange = (studentId, index, value) => {
         setResults(prev => ({
             ...prev,
@@ -180,6 +180,7 @@ export default function GroupResults() {
         }));
     };
 
+    // Handle participation checkbox changes
     const handleCheckboxChange = (studentId, checked) => {
         setSkippedStudents(prev => ({
             ...prev,
@@ -187,6 +188,7 @@ export default function GroupResults() {
         }));
     };
 
+    // Save all results to the server
     const saveResults = async () => {
         setSaved(false);
         setIsSaving(true);
@@ -207,7 +209,9 @@ export default function GroupResults() {
                 })
             });
 
-            if (!response.ok) throw new Error("Fehler beim Speichern");
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.error || "Fehler beim Speichern");
 
             setSaved(true);
         } catch (error) {
@@ -218,6 +222,7 @@ export default function GroupResults() {
         }
     };
 
+    // Render input fields for attempts (either heights or scores)
     const renderInputFields = (student, type) => {
         const numAttempts = sportConfig.attempts || 3;
         const values = type === "height"
@@ -235,7 +240,7 @@ export default function GroupResults() {
                     onChange={(e) => handleInputChange(student.id, index, e.target.value, type)}
                     disabled={!!skippedStudents[student.id]}
                     title={skippedStudents[student.id] ? "Nicht teilgenommen" : ""}
-                    />
+                />
                 {sportConfig.unit}
                 {type === "height" && (
                     <>
@@ -253,18 +258,21 @@ export default function GroupResults() {
         ));
     };
 
+    // Load sport configuration on initial render
     useEffect(() => {
         fetchSportConfig();
+        fetchScale();
+
     }, [sport]);
 
+    // Fetch students when sport config is ready
     useEffect(() => {
         if (sportConfig.attempts) fetchStudents();
     }, [sportConfig]);
 
-    useEffect(() => {
-        if (showScale) fetchScale();
-    }, [showScale]);
 
+
+    // Filter and sort students when search query changes
     useEffect(() => {
         const result = students.filter(student => {
             const present = student.anwesend === true;
@@ -282,6 +290,7 @@ export default function GroupResults() {
         setFilteredStudents(result);
     }, [searchQuery, students]);
 
+    // Add page leave confirmation if changes are unsaved
     useEffect(() => {
         const handleBeforeUnload = (e) => {
             if (!saved && students.length > 0) {
@@ -297,14 +306,14 @@ export default function GroupResults() {
         };
     }, [saved, students]);
 
-
-
     return (
         <div className="wrapper-container p-4">
             <div className="transparent-container mb-15">
                 <h1 className="text-3xl font-semibold text-gray-900 mb-4">
                     Ergebnisse für {sportName || sport}
                 </h1>
+
+                {/* Top button section */}
                 <div className="flex justify-between items-center mb-4">
                     <button
                         onClick={() => setShowScale(true)}
@@ -313,35 +322,37 @@ export default function GroupResults() {
                         <ClipboardList className="w-5 h-5" />
                         <span>Punkteskala</span>
                     </button>
-                    </div>
+                </div>
 
-                    <div className="mb-4 w-full relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <svg
+                {/* Search input */}
+                <div className="mb-4 w-full relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <svg
                             className="w-5 h-5 text-blue-600"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
                             viewBox="0 0 24 24"
-                            >
+                        >
                             <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.5 10.5a7.5 7.5 0 0013.15 6.15z"
                             />
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Schüler suchen..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-blue-600 rounded-md text-gray-900 placeholder-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
-                        />
-                        </div>
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Schüler suchen..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-blue-600 rounded-md text-gray-900 placeholder-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
+                    />
+                </div>
 
+                {/* Student list with inputs */}
                 <div className="flex-grow overflow-y-auto flex flex-col gap-4">
-                    {filteredStudents.map((student, index) => (
+                    {filteredStudents.map((student) => (
                         <div
                             key={student.id}
                             className={`bg-white shadow-md p-4 rounded-xl border border-gray-300 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between
@@ -371,153 +382,149 @@ export default function GroupResults() {
                     ))}
                 </div>
 
+                {/* Save button */}
                 {students.length > 0 && (
                     <div className="mt-6 flex flex-col items-center">
                         <button
-                        onClick={saveResults}
-                        disabled={isSaving}
-                        className={`inline-flex items-center gap-2 px-6 py-2 rounded-md border border-blue-600 text-blue-600 font-semibold transition-all duration-200 shadow-sm
-                            ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-600 hover:text-white hover:shadow-md'}`}
+                            onClick={saveResults}
+                            disabled={isSaving}
+                            className={`inline-flex items-center gap-2 px-6 py-2 rounded-md border border-blue-600 text-blue-600 font-semibold transition-all duration-200 shadow-sm
+                                ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-600 hover:text-white hover:shadow-md'}`}
                         >
-                        {isSaving ? (
-                            <>
-                            <Loader2 className="animate-spin" size={18} />
-                            Speichern...
-                            </>
-                        ) : saved ? (
-                            <>
-                            <CheckCircle size={18} />
-                            Gespeichert!
-                            </>
-                        ) : (
-                            'Ergebnisse speichern'
-                        )}
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={18} />
+                                    Speichern...
+                                </>
+                            ) : saved ? (
+                                <>
+                                    <CheckCircle size={18} />
+                                    Gespeichert!
+                                </>
+                            ) : (
+                                'Ergebnisse speichern'
+                            )}
                         </button>
                     </div>
                 )}
             </div>
 
+            {/* Points scale modal */}
             {showScale && (
-  <div
-    className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-50 px-4"
-    onClick={(e) => {
-      if (e.target === e.currentTarget) setShowScale(false);
-    }}
-  >
-    <div className="bg-white w-full max-w-2xl p-6 rounded-2xl shadow-xl border border-gray-200 overflow-y-auto max-h-[80vh]">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
-        Punkteskala – {sportName || sport}
-      </h2>
+                <div
+                    className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-50 px-4"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowScale(false);
+                    }}
+                >
+                    <div className="bg-white w-full max-w-2xl p-6 rounded-2xl shadow-xl border border-gray-200 overflow-y-auto max-h-[80vh]">
+                        <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
+                            Punkteskala – {sportName || sport}
+                        </h2>
 
-      {pointsData.length === 0 && (
-        <div className="text-center p-4 text-gray-600 rounded-md border border-dashed border-gray-300 bg-gray-50">
-          Keine Punkteskala gefunden.
-        </div>
-      )}
-
-      {/* Desktop Grid */}
-      <div className="hidden md:grid grid-cols-2 gap-6">
-        {pointsData.map(({ geschlecht, data }) => (
-          <div key={geschlecht} className="rounded-md border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-gray-50 py-2 px-4 border-b border-gray-200">
-              <h3 className="text-md font-semibold text-gray-800 text-center">
-                {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm text-left text-gray-700">
-                <thead className="bg-gray-100 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-2 font-semibold">Leistung</th>
-                    <th className="px-4 py-2 font-semibold text-right">Punkte</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((row, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-2">{row.leistung}</td>
-                      <td className="px-4 py-2 text-right">{row.punkte}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
-        {pointsData.length === 1 && <div />}
-      </div>
-
-        {/* Mobile Accordion mit Animation */}
-        <div className="block md:hidden space-y-4 text-gray-800">
-            {pointsData.map(({ geschlecht, data }, i) => {
-
-                return (
-                    <div
-                        key={geschlecht}
-                        className="border border-gray-200 rounded-md overflow-hidden shadow-sm"
-                    >
-                        <button
-                            onClick={() => setIsOpen((prev) => !prev)}
-                            className="w-full bg-gray-100 py-2 px-4 font-semibold text-left cursor-pointer flex items-center justify-between"
-                        >
-                          <span>
-                            {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
-                          </span>
-                            <svg
-                                className={`w-5 h-5 transform transition-transform duration-300 ${
-                                    isOpen ? "rotate-180" : ""
-                                }`}
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                viewBox="0 0 24 24"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        <div
-                            className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                                isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
-                            }`}
-                        >
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left text-gray-700 divide-y divide-gray-200">
-                                    <thead className="bg-gray-100">
-                                    <tr>
-                                        <th className="px-4 py-2">Leistung</th>
-                                        <th className="px-4 py-2 text-right">Punkte</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody className="bg-white">
-                                    {data.map((row, j) => (
-                                        <tr key={j} className="hover:bg-gray-50">
-                                            <td className="px-4 py-2">{row.leistung}</td>
-                                            <td className="px-4 py-2 text-right">{row.punkte}</td>
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
+                        {pointsData.length === 0 && (
+                            <div className="text-center p-4 text-gray-600 rounded-md border border-dashed border-gray-300 bg-gray-50">
+                                Keine Punkteskala gefunden.
                             </div>
+                        )}
+
+                        {/* Desktop Grid */}
+                        <div className="hidden md:grid grid-cols-2 gap-6">
+                            {pointsData.map(({ geschlecht, data }) => (
+                                <div key={geschlecht} className="rounded-md border border-gray-200 shadow-sm overflow-hidden">
+                                    <div className="bg-gray-50 py-2 px-4 border-b border-gray-200">
+                                        <h3 className="text-md font-semibold text-gray-800 text-center">
+                                            {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
+                                        </h3>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200 text-sm text-left text-gray-700">
+                                            <thead className="bg-gray-100 sticky top-0">
+                                            <tr>
+                                                <th className="px-4 py-2 font-semibold">Leistung</th>
+                                                <th className="px-4 py-2 font-semibold text-right">Punkte</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                            {data.map((row, i) => (
+                                                <tr key={i} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-2">{row.leistung}</td>
+                                                    <td className="px-4 py-2 text-right">{row.punkte}</td>
+                                                </tr>
+                                            ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ))}
+                            {pointsData.length === 1 && <div />}
+                        </div>
+
+                        {/* Mobile Accordion */}
+                        <div className="block md:hidden space-y-4 text-gray-800">
+                            {pointsData.map(({ geschlecht, data }) => (
+                                <div
+                                    key={geschlecht}
+                                    className="border border-gray-200 rounded-md overflow-hidden shadow-sm"
+                                >
+                                    <button
+                                        onClick={() => setIsOpen((prev) => !prev)}
+                                        className="w-full bg-gray-100 py-2 px-4 font-semibold text-left cursor-pointer flex items-center justify-between"
+                                    >
+                                        <span>
+                                            {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
+                                        </span>
+                                        <svg
+                                            className={`w-5 h-5 transform transition-transform duration-300 ${
+                                                isOpen ? "rotate-180" : ""
+                                            }`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div
+                                        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                                            isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                                        }`}
+                                    >
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm text-left text-gray-700 divide-y divide-gray-200">
+                                                <thead className="bg-gray-100">
+                                                <tr>
+                                                    <th className="px-4 py-2">Leistung</th>
+                                                    <th className="px-4 py-2 text-right">Punkte</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody className="bg-white">
+                                                {data.map((row, j) => (
+                                                    <tr key={j} className="hover:bg-gray-50">
+                                                        <td className="px-4 py-2">{row.leistung}</td>
+                                                        <td className="px-4 py-2 text-right">{row.punkte}</td>
+                                                    </tr>
+                                                ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-6 text-center">
+                            <button
+                                onClick={() => setShowScale(false)}
+                                className="inline-flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-200 focus:outline-none"
+                            >
+                                Schliessen
+                            </button>
                         </div>
                     </div>
-                );
-            })}
-        </div>
-
-      <div className="mt-6 text-center">
-        <button
-          onClick={() => setShowScale(false)}
-          className="inline-flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-200 focus:outline-none"
-        >
-          Schliessen
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-
-
+                </div>
+            )}
 
             <BackButton />
         </div>

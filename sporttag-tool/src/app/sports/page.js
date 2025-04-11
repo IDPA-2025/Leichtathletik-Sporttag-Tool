@@ -10,17 +10,20 @@ import BackButton from "@/app/components/BackButton";
 export default function SportsOverview() {
     const [sports, setSports] = useState([])
 
-    useEffect(() => {
-        const fetchSports = async () => {
-            const { data, error } = await supabase.from("sports").select("*")
-            if (error) {
-                console.error("Fehler beim Laden der Sportarten:", error)
-            } else {
-                setSports(data)
-            }
+    const fetchSports = async () => {
+        try {
+            const res = await fetch("/api/sports/all");
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error);
+            setSports(json.data);
+        } catch (error) {
+            console.error("Fehler beim Laden der Sportarten:", error);
         }
-        fetchSports()
-    }, [])
+    };
+
+    useEffect(() => {
+        fetchSports();
+    }, []);
 
     return (
         <div className="wrapper-container h-screen flex items-center justify-center">
