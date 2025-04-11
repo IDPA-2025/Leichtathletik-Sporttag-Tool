@@ -65,7 +65,8 @@ export default function GroupOverview() {
 
     return (
         <div className="wrapper-container min-h-screen flex flex-col overflow-auto">
-            <div className="transparent-container relative w-full flex flex-col items-center sm:min-h-[90dvh] sm:max-h-[90dvh] sm:overflow-hidden overflow-visible">
+            <div
+                className="transparent-container relative w-full flex flex-col items-center sm:min-h-[90dvh] sm:max-h-[90dvh] sm:overflow-hidden overflow-visible">
 
                 <div className="w-full py-6 flex items-center justify-center rounded-t-lg">
                     <h1 className="text-4xl font-light text-gray-900">
@@ -83,9 +84,10 @@ export default function GroupOverview() {
                                 : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md'
                         }`}
                     >
-            <span className="relative z-10 transition-colors duration-200 group-hover:text-inherit sm:text-lg text-sm">
-                Ergebnisse eintragen <br></br> ({selectedGroups.length} Gruppen)
-            </span>
+                        <span
+                            className="relative z-10 transition-colors duration-200 group-hover:text-inherit sm:text-lg text-sm">
+                            Ergebnisse eintragen <br></br> ({selectedGroups.length} Gruppen)
+                        </span>
                         <svg
                             className={`w-4 h-4 transition-transform duration-200 transform ${
                                 selectedGroups.length === 0
@@ -97,36 +99,43 @@ export default function GroupOverview() {
                             strokeWidth="2"
                             viewBox="0 0 24 24"
                         >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                         </svg>
                     </button>
                 </div>
 
-                <div className="w-full flex-1 flex justify-center items-start px-4 py-8 overflow-auto sm:overflow-hidden">
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-5xl">
-                        {groups.map(({ id, klasse, geschlecht }) => (
-                            <div
-                                key={id}
-                                onClick={() => toggleGroup(id)}
-                                className={`cursor-pointer relative aspect-square border-2 ${
-                                    selectedGroups.includes(id) ? 'border-blue-600 bg-blue-50' : 'border-green-500'
-                                } rounded-lg transition flex flex-col items-center justify-center p-3 sm:p-4`}
-                            >
-                                <p className="text-gray-700 text-lg sm:text-xl md:text-2xl font-semibold text-center">
-                                    {klasse}
-                                </p>
+                <div className="w-full flex-1 flex justify-center items-start px-4 py-8 overflow-auto">
+                    <div className="w-full max-w-6xl">
+                        <div
+                            className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
+                            {groups.map(({id, klasse, geschlecht}) => (
                                 <div
-                                    className={`absolute bottom-0 right-0 w-0 h-0 border-b-[20px] border-l-[20px] sm:border-l-[50px] sm:border-b-[50px] border-transparent rounded-br-md ${
-                                        geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'
-                                    }`}
-                                ></div>
-                            </div>
-                        ))}
+                                    key={id}
+                                    onClick={() => toggleGroup(id)}
+                                    className={`cursor-pointer relative aspect-square border-2 ${
+                                        selectedGroups.includes(id) ? 'border-blue-600 bg-blue-50' : 'border-green-500'
+                                    } rounded-lg transition flex flex-col items-center justify-center p-2 sm:p-3 md:p-4`}
+                                >
+                                    <p className="text-gray-700 text-base sm:text-lg md:text-xl font-semibold text-center">
+                                        {klasse}
+                                    </p>
+                                    <div
+                                        className={`absolute bottom-0 right-0 w-0 h-0 
+                        border-b-[15px] border-l-[15px] 
+                        sm:border-b-[25px] sm:border-l-[25px] 
+                        md:border-b-[30px] md:border-l-[30px]
+                        border-transparent rounded-br-md ${
+                                            geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'
+                                        }`}
+                                    ></div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <BackButton />
+            <BackButton/>
         </div>
-    )
+    );
 }
