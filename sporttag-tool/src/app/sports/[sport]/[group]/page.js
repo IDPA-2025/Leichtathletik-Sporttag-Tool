@@ -24,6 +24,10 @@ export default function GroupResults() {
     const [pointsData, setPointsData] = useState([]);
     const [sportName, setSportName] = useState("");
     const [skippedStudents, setSkippedStudents] = useState({});
+    const [isOpen, setIsOpen] = useState(false);
+    const [openAccordion, setOpenAccordion] = useState(null);
+
+
     const [sportConfig, setSportConfig] = useState({
         attempts: 4,
         unit: '',
@@ -443,34 +447,62 @@ export default function GroupResults() {
         {pointsData.length === 1 && <div />}
       </div>
 
-      {/* Mobile Accordion */}
-      <div className="block md:hidden space-y-4 text-gray-800">
-        {pointsData.map(({ geschlecht, data }) => (
-          <details key={geschlecht} className="border border-gray-200 rounded-md overflow-hidden shadow-sm">
-            <summary className="bg-gray-100 py-2 px-4 font-semibold cursor-pointer select-none">
-              {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
-            </summary>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-gray-700 divide-y divide-gray-200">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="px-4 py-2">Leistung</th>
-                    <th className="px-4 py-2 text-right">Punkte</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {data.map((row, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-2">{row.leistung}</td>
-                      <td className="px-4 py-2 text-right">{row.punkte}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        ))}
-      </div>
+        {/* Mobile Accordion mit Animation */}
+        <div className="block md:hidden space-y-4 text-gray-800">
+            {pointsData.map(({ geschlecht, data }, i) => {
+
+                return (
+                    <div
+                        key={geschlecht}
+                        className="border border-gray-200 rounded-md overflow-hidden shadow-sm"
+                    >
+                        <button
+                            onClick={() => setIsOpen((prev) => !prev)}
+                            className="w-full bg-gray-100 py-2 px-4 font-semibold text-left cursor-pointer flex items-center justify-between"
+                        >
+                          <span>
+                            {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
+                          </span>
+                            <svg
+                                className={`w-5 h-5 transform transition-transform duration-300 ${
+                                    isOpen ? "rotate-180" : ""
+                                }`}
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div
+                            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                                isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                            }`}
+                        >
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left text-gray-700 divide-y divide-gray-200">
+                                    <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="px-4 py-2">Leistung</th>
+                                        <th className="px-4 py-2 text-right">Punkte</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody className="bg-white">
+                                    {data.map((row, j) => (
+                                        <tr key={j} className="hover:bg-gray-50">
+                                            <td className="px-4 py-2">{row.leistung}</td>
+                                            <td className="px-4 py-2 text-right">{row.punkte}</td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
 
       <div className="mt-6 text-center">
         <button
