@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabaseClient"
@@ -11,6 +11,7 @@ export default function GroupOverview() {
     const [groups, setGroups] = useState([])
     const [sportName, setSportName] = useState("");
     const [selectedGroups, setSelectedGroups] = useState([]);
+    const [showStickyButton, setShowStickyButton] = useState(false);
 
     const toggleGroup = (groupId) => {
         setSelectedGroups(prev =>
@@ -72,10 +73,10 @@ export default function GroupOverview() {
             fetchSportName();
         }
     }, [sport]);
-
     return (
-        <div className="wrapper-container h-screen flex flex-col">
-          <div className="transparent-container flex flex-col items-center w-full">
+        <div className="wrapper-container min-h-screen flex flex-col overflow-auto">
+          <div className="transparent-container relative w-full flex flex-col items-center
+                          sm:min-h-[90dvh] sm:max-h-[90dvh] sm:overflow-hidden">
       
             {/* Titel */}
             <div className="w-full py-6 flex items-center justify-center rounded-t-lg">
@@ -84,9 +85,43 @@ export default function GroupOverview() {
               </h1>
             </div>
       
-            {/* Gruppenansicht + Immer sichtbarer Button */}
-            <div className="w-full flex-1 flex flex-col items-center justify-start p-4">
-              {/* Grid */}
+            {/* Button – sticky auf Desktop, normal auf Mobile */}
+            <div
+              className="w-full z-10 flex justify-center 
+                         sm:sticky sm:top-[1rem] sm:bg-transparent"
+            >
+              <button
+                onClick={handleGoToResults}
+                disabled={selectedGroups.length === 0}
+                className={`group relative inline-flex items-center gap-2 rounded-lg border px-6 py-2 transition-all duration-200 focus:outline-none
+                  ${
+                    selectedGroups.length === 0
+                      ? 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100'
+                      : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md'
+                  }`}
+              >
+                <span className="relative z-10 transition-colors duration-200 group-hover:text-inherit">
+                  Ergebnisse anzeigen ({selectedGroups.length} Gruppen)
+                </span>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 transform
+                    ${
+                      selectedGroups.length === 0
+                        ? 'text-gray-400'
+                        : 'group-hover:translate-x-1 group-hover:text-white'
+                    }`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </button>
+            </div>
+      
+            {/* Gruppenansicht */}
+            <div className="w-full flex-1 flex justify-center items-start px-4 py-8">
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
                 {groups.map(({ id, klasse, geschlecht }) => (
                   <div
@@ -107,42 +142,10 @@ export default function GroupOverview() {
                   </div>
                 ))}
               </div>
-      
-              {/* Immer sichtbarer Button */}
-              <div className="mt-10 flex justify-center w-full">
-                <button
-                  onClick={handleGoToResults}
-                  disabled={selectedGroups.length === 0}
-                  className={`group relative inline-flex items-center gap-2 rounded-lg border px-6 py-2 transition-all duration-200 focus:outline-none
-                    ${
-                      selectedGroups.length === 0
-                        ? 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-100'
-                        : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md'
-                    }`}
-                >
-                  <span className="relative z-10 transition-colors duration-200 group-hover:text-inherit">
-                    Ergebnisse anzeigen ({selectedGroups.length} Gruppen)
-                  </span>
-                  <svg
-                    className={`w-4 h-4 transition-transform duration-200 transform
-                      ${
-                        selectedGroups.length === 0
-                          ? 'text-gray-400'
-                          : 'group-hover:translate-x-1 group-hover:text-white'
-                      }`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </button>
-              </div>
             </div>
           </div>
       
-          {/* Back Button unten */}
+          {/* Zurück-Button unten */}
           <BackButton />
         </div>
       )
