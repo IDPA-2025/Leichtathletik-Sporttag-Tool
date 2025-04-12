@@ -1,14 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Loader2, CheckCircle, ClipboardList } from "lucide-react";
 import BackButton from "@/app/components/BackButton";
 
+// New Modal Component for Unsaved Changes
+const UnsavedChangesModal = ({ isOpen, onClose, onSave }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50 px-4 transition-opacity duration-300 ease-in-out">
+            <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl border border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                    Ungespeicherte Änderungen
+                </h2>
+                <p className="text-gray-700 mb-6">
+                    Es gibt ungespeicherte Änderungen auf dieser Seite. Möchten Sie speichern, bevor Sie fortfahren?
+                </p>
+                <div className="flex justify-end gap-4">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        onClick={onSave}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                        Speichern und fortfahren
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function GroupResults() {
     // Get URL parameters
     const { sport, group } = useParams();
+    const router = useRouter();
     const groupKeys = group.split(","); // e.g. ["1a-maennlich", "2a-weiblich"]
 
     // State management
@@ -26,6 +58,12 @@ export default function GroupResults() {
     const [skippedStudents, setSkippedStudents] = useState({});
     const [isOpen, setIsOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState(null);
+    const storageKey = `sportresults_${sport}_${group}`;
+
+    // Custom modal state
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+    const [pendingAction, setPendingAction] = useState(null);
+    const [hasChanges, setHasChanges] = useState(false);
 
     // Sport configuration
     const [sportConfig, setSportConfig] = useState({
@@ -159,39 +197,16 @@ export default function GroupResults() {
             setResults(loadedResults);
             setScores(loadedScores);
             setSkippedStudents(loadedSkipped);
+
+            // After loading existing data, set hasChanges to false
+            setHasChanges(false);
         } catch (err) {
             console.error("Fehler bei fetchExistingResults:", err);
         }
     };
 
-    // Handle input changes for heights and scores
-    const handleInputChange = (studentId, index, value, type) => {
-        const setter = type === "height" ? setAttemptHeights : setScores;
-
-        setter(prev => ({
-            ...prev,
-            [studentId]: prev[studentId].map((v, i) => (i === index ? value : v))
-        }));
-    };
-
-    // Handle success/fail result changes
-    const handleResultChange = (studentId, index, value) => {
-        setResults(prev => ({
-            ...prev,
-            [studentId]: prev[studentId].map((v, i) => (i === index ? value : v))
-        }));
-    };
-
-    // Handle participation checkbox changes
-    const handleCheckboxChange = (studentId, checked) => {
-        setSkippedStudents(prev => ({
-            ...prev,
-            [studentId]: checked,
-        }));
-    };
-
-    // Save all results to the server
-    const saveResults = async () => {
+    // Handle saving results with a completion callback
+    const saveResults = useCallback(async (onComplete) => {
         setSaved(false);
         setIsSaving(true);
 
@@ -217,12 +232,50 @@ export default function GroupResults() {
             if (!response.ok) throw new Error(result.error || "Fehler beim Speichern");
 
             setSaved(true);
+            setHasChanges(false);
+
+            // If there's a completion callback, run it
+            if (typeof onComplete === 'function') {
+                onComplete();
+            }
         } catch (error) {
             console.error("Speicherfehler:", error);
         } finally {
             setIsSaving(false);
             setTimeout(() => setSaved(false), 2500);
         }
+    }, [students, sport, group, skippedStudents, attemptHeights, results, scores, sportConfig]);
+
+    // Handle input changes for heights and scores
+    const handleInputChange = (studentId, index, value, type) => {
+        const setter = type === "height" ? setAttemptHeights : setScores;
+
+        setter(prev => ({
+            ...prev,
+            [studentId]: prev[studentId].map((v, i) => (i === index ? value : v))
+        }));
+
+        setHasChanges(true);
+    };
+
+    // Handle success/fail result changes
+    const handleResultChange = (studentId, index, value) => {
+        setResults(prev => ({
+            ...prev,
+            [studentId]: prev[studentId].map((v, i) => (i === index ? value : v))
+        }));
+
+        setHasChanges(true);
+    };
+
+    // Handle participation checkbox changes
+    const handleCheckboxChange = (studentId, checked) => {
+        setSkippedStudents(prev => ({
+            ...prev,
+            [studentId]: checked,
+        }));
+
+        setHasChanges(true);
     };
 
     // Render input fields for attempts (either heights or scores)
@@ -265,15 +318,12 @@ export default function GroupResults() {
     useEffect(() => {
         fetchSportConfig();
         fetchScale();
-
     }, [sport]);
 
     // Fetch students when sport config is ready
     useEffect(() => {
         if (sportConfig.attempts) fetchStudents();
     }, [sportConfig]);
-
-
 
     // Filter and sort students when search query changes
     useEffect(() => {
@@ -293,21 +343,87 @@ export default function GroupResults() {
         setFilteredStudents(result);
     }, [searchQuery, students]);
 
-    // Add page leave confirmation if changes are unsaved
+    // Custom navigation handler that displays our modal instead of browser alert
     useEffect(() => {
+        let unloadHandler = null;
+
+        // Handle beforeunload event (reloads, closing tab, etc.)
         const handleBeforeUnload = (e) => {
-            if (!saved && students.length > 0) {
-                e.preventDefault();
-                e.returnValue = "";
+            if (hasChanges && students.length > 0 && !saved) {
+                // This prevents the browser's native dialog from showing
+                // We need this for compatibility with browsers that support the standard behavior
+                const event = e || window.event;
+                event.preventDefault();
+
+                // Show our custom modal
+                setShowUnsavedModal(true);
+                setPendingAction('reload');
+
+                // This message text won't be shown on most modern browsers
+                // but we include it for compatibility
+                e.returnValue = "Ungespeicherte Änderungen";
+                return "Ungespeicherte Änderungen";
             }
         };
 
-        window.addEventListener("beforeunload", handleBeforeUnload);
+        // Capture page reload/navigation events only if we have unsaved changes
+        if (hasChanges && students.length > 0 && !saved) {
+            unloadHandler = (e) => handleBeforeUnload(e);
+            window.addEventListener('beforeunload', unloadHandler);
 
+            // For Next.js router events, if available
+            if (router && router.events) {
+                router.events.on('routeChangeStart', (url) => {
+                    if (hasChanges && students.length > 0 && !saved) {
+                        // Cancel the route change
+                        router.events.emit('routeChangeError');
+
+                        // Show our modal
+                        setShowUnsavedModal(true);
+                        setPendingAction(url);
+
+                        // Prevent the default handling
+                        throw new Error('Navigation cancelled due to unsaved changes');
+                    }
+                });
+            }
+        }
+
+        // Cleanup event listeners
         return () => {
-            window.removeEventListener("beforeunload", handleBeforeUnload);
+            if (unloadHandler) {
+                window.removeEventListener('beforeunload', unloadHandler);
+            }
+
+            if (router && router.events) {
+                router.events.off('routeChangeStart');
+            }
         };
-    }, [saved, students]);
+    }, [hasChanges, students, saved, router]);
+
+    // Handler for when the user confirms saving in the modal
+    const handleSaveAndContinue = () => {
+        saveResults(() => {
+            // After saving, check what the pending action was
+            if (pendingAction === 'reload') {
+                // For page reload, we trigger window.location.reload()
+                window.location.reload();
+            } else if (pendingAction && typeof pendingAction === 'string') {
+                // For Next.js navigation, we use router.push
+                router.push(pendingAction);
+            }
+
+            // Reset state
+            setPendingAction(null);
+            setShowUnsavedModal(false);
+        });
+    };
+
+    // Handler for when the user cancels the save dialog
+    const handleCancelSave = () => {
+        setShowUnsavedModal(false);
+        setPendingAction(null);
+    };
 
     return (
         <div className="wrapper-container p-4">
@@ -359,7 +475,7 @@ export default function GroupResults() {
                         <div
                             key={student.id}
                             className={`bg-white shadow-md p-4 rounded-xl border border-gray-300 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between
-                            ${skippedStudents[student.id] ? "opacity-50 line-through" : ""}`}
+              ${skippedStudents[student.id] ? "opacity-50 line-through" : ""}`}
                         >
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 mb-2">
                                 <label className="flex items-center gap-2 text-sm text-gray-500">
@@ -389,10 +505,10 @@ export default function GroupResults() {
                 {students.length > 0 && (
                     <div className="mt-6 flex flex-col items-center">
                         <button
-                            onClick={saveResults}
+                            onClick={() => saveResults()}
                             disabled={isSaving}
                             className={`inline-flex items-center gap-2 px-6 py-2 rounded-md border border-blue-600 text-blue-600 font-semibold transition-all duration-200 shadow-sm
-                                ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-600 hover:text-white hover:shadow-md'}`}
+              ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-600 hover:text-white hover:shadow-md'}`}
                         >
                             {isSaving ? (
                                 <>
@@ -421,6 +537,7 @@ export default function GroupResults() {
                     }}
                 >
                     <div className="bg-white w-full max-w-2xl p-6 rounded-2xl shadow-xl border border-gray-200 overflow-y-auto max-h-[80vh] transform transition-all duration-300 ease-out">
+                        {/* Modal content */}
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-semibold text-gray-900">
                                 Punkteskala – {sportName || sport}
@@ -489,12 +606,12 @@ export default function GroupResults() {
                                         onClick={() => setOpenAccordion(openAccordion === index ? null : index)}
                                         className="w-full bg-gradient-to-r from-blue-50 to-blue-100 py-3 px-4 font-semibold text-left cursor-pointer flex items-center justify-between transition-colors hover:from-blue-100 hover:to-blue-200"
                                     >
-                            <span className="flex items-center gap-2">
-                                <span className="text-blue-600">
-                                    {geschlecht === "maennlich" ? "♂" : "♀"}
-                                </span>
-                                <span>{geschlecht === "maennlich" ? "Männlich" : "Weiblich"}</span>
-                            </span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-blue-600">
+                        {geschlecht === "maennlich" ? "♂" : "♀"}
+                      </span>
+                      <span>{geschlecht === "maennlich" ? "Männlich" : "Weiblich"}</span>
+                    </span>
                                         <svg
                                             className={`w-5 h-5 text-blue-600 transform transition-transform duration-300 ${
                                                 openAccordion === index ? "rotate-180" : ""
@@ -553,6 +670,13 @@ export default function GroupResults() {
                     </div>
                 </div>
             )}
+
+            {/* Unsaved Changes Modal */}
+            <UnsavedChangesModal
+                isOpen={showUnsavedModal}
+                onClose={handleCancelSave}
+                onSave={handleSaveAndContinue}
+            />
 
             <BackButton />
         </div>
