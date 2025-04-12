@@ -21,11 +21,16 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Mock ExportPopup
-jest.mock('@/app/components/ExportPopup', () => ({ onClose }) => (
-  <div data-testid="export-popup">
-    ExportPopup <button onClick={onClose}>Close</button>
-  </div>
-));
+jest.mock('@/app/components/ExportPopup', () => {
+  const ExportPopup = ({ onClose }) => (
+      <div data-testid="export-popup">
+        ExportPopup <button onClick={onClose}>Close</button>
+      </div>
+  );
+  ExportPopup.displayName = "MockExportPopup";
+  return ExportPopup;
+});
+
 
 // Mock fetch
 global.fetch = jest.fn();
