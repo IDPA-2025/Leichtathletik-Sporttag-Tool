@@ -7,8 +7,9 @@ export async function POST(req) {
         const { mode, preset, filters, showDetails, showGrades } = await req.json();
 
         const cookie = req.headers.get("cookie");
+        const { origin } = new URL(req.url);
 
-        const rankingsRes = await fetch(`${process.env.INTERNAL_API_URL}/api/rankings/with-details`, {
+        const rankingsRes = await fetch(`${origin}/api/rankings/with-details`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",

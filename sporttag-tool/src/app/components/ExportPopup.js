@@ -146,7 +146,22 @@ export default function ExportPopup({ onClose }) {
         setMessage("");
 
         try {
-            // Alle Parameter an die API übergeben
+            // 1. Noten & Punkte zuerst berechnen
+            const gradeRes = await fetch("/api/students/calculate-grade", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" }
+            });
+
+            const gradeResult = await gradeRes.json();
+
+            if (!gradeRes.ok) {
+                throw new Error(gradeResult.error || "Fehler bei der Notenberechnung");
+            }
+
+            console.log(`✅ Noten aktualisiert für ${gradeResult.updated} Schüler`);
+
+            // 2. Danach Rangliste holen
             const res = await fetch("/api/rankings/generate", {
                 method: "POST",
                 credentials: "include",
@@ -162,20 +177,22 @@ export default function ExportPopup({ onClose }) {
 
             if (!res.ok) {
                 const errorData = await res.json();
-                throw new Error(errorData.error || "Fehler beim Laden der Daten");
+                throw new Error(errorData.error || "Fehler beim Laden der Rangliste");
             }
 
             const data = await res.json();
             setRanglisten(data.ranglisten);
-            setExportData(data); // Speichere die vollständigen Daten für den Export
+            setExportData(data);
             setStep(2);
+            setMessage(`✅ Ranglisten für Export generiert`);
         } catch (err) {
-            console.error("Fehler beim Generieren:", err);
+            console.error("❌ Fehler beim Generieren:", err);
             setMessage("❌ Fehler: " + (err.message || JSON.stringify(err)));
         } finally {
             setIsGenerating(false);
         }
     };
+
 
     const calculateGrades = async () => {
         try {
@@ -308,7 +325,6 @@ export default function ExportPopup({ onClose }) {
                         <div className="grid grid-cols-2 gap-2 mb-4">
                             <button
                                 onClick={async () => {
-                                    await calculateGrades(); // erst Noten berechnen
                                     await handleGenerateRanking(); // dann Rangliste generieren
                                 }}
                                 disabled={isGenerating}
