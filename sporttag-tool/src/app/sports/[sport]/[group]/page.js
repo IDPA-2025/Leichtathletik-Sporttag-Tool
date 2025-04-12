@@ -6,7 +6,7 @@ import { Loader2, CheckCircle, ClipboardList } from "lucide-react";
 import BackButton from "@/app/components/BackButton";
 
 // New Modal Component for Unsaved Changes
-const UnsavedChangesModal = ({ isOpen, onClose, onSave }) => {
+const UnsavedChangesModal = ({ isOpen, onClose, onSave, isSaving }) => {
     if (!isOpen) return null;
 
     return (
@@ -26,10 +26,11 @@ const UnsavedChangesModal = ({ isOpen, onClose, onSave }) => {
                         Abbrechen
                     </button>
                     <button
-                        onClick={onSave}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        onClick={!isSaving ? onSave : undefined}
+                        disabled={isSaving}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
-                        Speichern und fortfahren
+                        {isSaving ? "Speichert..." : "Speichern und fortfahren"}
                     </button>
                 </div>
             </div>
@@ -39,7 +40,7 @@ const UnsavedChangesModal = ({ isOpen, onClose, onSave }) => {
 
 export default function GroupResults() {
     // Get URL parameters
-    const { sport, group } = useParams();
+    const {sport, group} = useParams();
     const router = useRouter();
     const groupKeys = group.split(","); // e.g. ["1a-maennlich", "2a-weiblich"]
 
@@ -345,79 +346,67 @@ export default function GroupResults() {
 
     // Custom navigation handler that displays our modal instead of browser alert
     useEffect(() => {
-        let unloadHandler = null;
-
-        // Handle beforeunload event (reloads, closing tab, etc.)
         const handleBeforeUnload = (e) => {
             if (hasChanges && students.length > 0 && !saved) {
-                // This prevents the browser's native dialog from showing
-                // We need this for compatibility with browsers that support the standard behavior
-                const event = e || window.event;
-                event.preventDefault();
-
-                // Show our custom modal
+                e.preventDefault();
                 setShowUnsavedModal(true);
                 setPendingAction('reload');
-
-                // This message text won't be shown on most modern browsers
-                // but we include it for compatibility
-                e.returnValue = "Ungespeicherte Änderungen";
-                return "Ungespeicherte Änderungen";
             }
         };
 
-        // Capture page reload/navigation events only if we have unsaved changes
-        if (hasChanges && students.length > 0 && !saved) {
-            unloadHandler = (e) => handleBeforeUnload(e);
-            window.addEventListener('beforeunload', unloadHandler);
 
-            // For Next.js router events, if available
-            if (router && router.events) {
-                router.events.on('routeChangeStart', (url) => {
-                    if (hasChanges && students.length > 0 && !saved) {
-                        // Cancel the route change
-                        router.events.emit('routeChangeError');
-
-                        // Show our modal
-                        setShowUnsavedModal(true);
-                        setPendingAction(url);
-
-                        // Prevent the default handling
-                        throw new Error('Navigation cancelled due to unsaved changes');
-                    }
-                });
+        const handleClick = (e) => {
+            const anchor = e.target.closest('a');
+            if (anchor && anchor.href && hasChanges && students.length > 0 && !saved) {
+                e.preventDefault();
+                setShowUnsavedModal(true);
+                setPendingAction(anchor.href);
             }
-        }
+        };
 
-        // Cleanup event listeners
+        const handleRouteChange = (url) => {
+            if (hasChanges && students.length > 0 && !saved) {
+                setShowUnsavedModal(true);
+                setPendingAction(url);
+                throw 'Navigation wegen ungespeicherten Änderungen abgebrochen.';
+            }
+        };
+
+        // Event Listener
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        window.addEventListener("click", handleClick);
+        router.events?.on("routeChangeStart", handleRouteChange);
+
+        // Cleanup
         return () => {
-            if (unloadHandler) {
-                window.removeEventListener('beforeunload', unloadHandler);
-            }
-
-            if (router && router.events) {
-                router.events.off('routeChangeStart');
-            }
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+            window.removeEventListener("click", handleClick);
+            router.events?.off("routeChangeStart", handleRouteChange);
         };
-    }, [hasChanges, students, saved, router]);
+    }, [hasChanges, students, saved]);
+
 
     // Handler for when the user confirms saving in the modal
     const handleSaveAndContinue = () => {
         saveResults(() => {
-            // After saving, check what the pending action was
             if (pendingAction === 'reload') {
-                // For page reload, we trigger window.location.reload()
                 window.location.reload();
-            } else if (pendingAction && typeof pendingAction === 'string') {
-                // For Next.js navigation, we use router.push
-                router.push(pendingAction);
+            } else if (typeof pendingAction === 'string') {
+                // Check ob es dieselbe Domain ist
+                const isExternal = !pendingAction.startsWith("/") && !pendingAction.includes(window.location.origin);
+
+                if (!isExternal) {
+                    router.push(pendingAction);
+                } else {
+                    window.location.href = pendingAction;
+                }
             }
 
-            // Reset state
             setPendingAction(null);
             setShowUnsavedModal(false);
         });
     };
+
 
     // Handler for when the user cancels the save dialog
     const handleCancelSave = () => {
@@ -676,7 +665,9 @@ export default function GroupResults() {
                 isOpen={showUnsavedModal}
                 onClose={handleCancelSave}
                 onSave={handleSaveAndContinue}
+                isSaving={isSaving}
             />
+
 
             <BackButton />
         </div>
