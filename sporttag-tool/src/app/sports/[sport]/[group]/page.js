@@ -346,15 +346,26 @@ export default function GroupResults() {
 
     // Custom navigation handler that displays our modal instead of browser alert
     useEffect(() => {
+        // Diese Funktion verhindert die Navigation ohne die Standard-Dialog anzuzeigen
         const handleBeforeUnload = (e) => {
             if (hasChanges && students.length > 0 && !saved) {
+                // Nur für kompatible Browser: Standard-Dialog unterdrücken
                 e.preventDefault();
+
+                // Safari auf iOS wird diese Meldung ignorieren, aber für andere Browser
+                // wird die Standard-Meldung überschrieben
+                e.returnValue = "";
+
+                // Modal anzeigen (wird auf iOS nicht automatisch funktionieren)
                 setShowUnsavedModal(true);
                 setPendingAction('reload');
+
+                // Dies zeigt den Browser-Dialog in kompatiblen Browsern
+                return "";
             }
         };
 
-
+        // Handler für normale Link-Klicks, die wir abfangen können
         const handleClick = (e) => {
             const anchor = e.target.closest('a');
             if (anchor && anchor.href && hasChanges && students.length > 0 && !saved) {
@@ -364,33 +375,60 @@ export default function GroupResults() {
             }
         };
 
+        // Handler für Next.js Router-Events
         const handleRouteChange = (url) => {
             if (hasChanges && students.length > 0 && !saved) {
                 setShowUnsavedModal(true);
                 setPendingAction(url);
+                router.events?.emit('routeChangeError');
                 throw 'Navigation wegen ungespeicherten Änderungen abgebrochen.';
             }
         };
 
-        // Event Listener
+        // iOS Safari spezifischer Handler für die Back-Button-Funktionalität
+        const handlePopState = (e) => {
+            if (hasChanges && students.length > 0 && !saved) {
+                // Verhindern des Zurückgehens
+                history.pushState(null, document.title, window.location.href);
+                setShowUnsavedModal(true);
+                setPendingAction('back'); // Spezieller Wert für Zurück-Navigation
+            }
+        };
+
+        // Event Listeners registrieren
         window.addEventListener("beforeunload", handleBeforeUnload);
-        window.addEventListener("click", handleClick);
-        router.events?.on("routeChangeStart", handleRouteChange);
+        document.addEventListener("click", handleClick);
+        window.addEventListener("popstate", handlePopState);
+
+        // Bei der ersten Ladung einen History-Eintrag erstellen
+        if (hasChanges && students.length > 0) {
+            history.pushState(null, document.title, window.location.href);
+        }
+
+        // Router-Events nur hinzufügen, wenn sie existieren
+        if (router.events) {
+            router.events.on("routeChangeStart", handleRouteChange);
+        }
 
         // Cleanup
         return () => {
             window.removeEventListener("beforeunload", handleBeforeUnload);
-            window.removeEventListener("click", handleClick);
-            router.events?.off("routeChangeStart", handleRouteChange);
+            document.removeEventListener("click", handleClick);
+            window.removeEventListener("popstate", handlePopState);
+            if (router.events) {
+                router.events.off("routeChangeStart", handleRouteChange);
+            }
         };
-    }, [hasChanges, students, saved]);
-
-
-    // Handler for when the user confirms saving in the modal
+    }, [hasChanges, students, saved, router]);    // Handler for when the user confirms saving in the modal
     const handleSaveAndContinue = () => {
         saveResults(() => {
+            // Erst nach dem Speichern die Änderungen zurücksetzen
+            setHasChanges(false);
+
             if (pendingAction === 'reload') {
                 window.location.reload();
+            } else if (pendingAction === 'back') {
+                window.history.back();
             } else if (typeof pendingAction === 'string') {
                 // Check ob es dieselbe Domain ist
                 const isExternal = !pendingAction.startsWith("/") && !pendingAction.includes(window.location.origin);
