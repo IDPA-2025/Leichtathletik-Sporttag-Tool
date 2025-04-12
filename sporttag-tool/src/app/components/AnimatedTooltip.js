@@ -34,79 +34,82 @@ export const AnimatedTooltip = ({ items }) => {
   };
 
   return (
-    <>
-      {items.map((item) => {
-        const [bgColor, setBgColor] = useState("#ffffff");
-        const [textColor, setTextColor] = useState("#000000");
-        const imgRef = useRef(null);
+      <>
+        {items.map((item) => {
+          return <TooltipItem key={item.id} item={item} hoveredIndex={hoveredIndex} setHoveredIndex={setHoveredIndex} handleMouseMove={handleMouseMove} rotate={rotate} translateX={translateX} />
+        })}
+      </>
+  );
+};
 
+function TooltipItem({ item, hoveredIndex, setHoveredIndex, handleMouseMove, rotate, translateX }) {
+  const [bgColor, setBgColor] = useState("#ffffff");
+  const [textColor, setTextColor] = useState("#000000");
+  const imgRef = useRef(null);
 
-        useEffect(() => {
-          const analyze = async () => {
-            const img = imgRef.current;
-            if (!img) return;
+  useEffect(() => {
+    const analyze = async () => {
+      const img = imgRef.current;
+      if (!img) return;
 
-            if (!img.complete) {
-              img.onload = () => analyze();
-              return;
-            }
+      if (!img.complete) {
+        img.onload = () => analyze();
+        return;
+      }
 
-            try {
-              const canvas = document.createElement("canvas");
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext("2d");
-              ctx.drawImage(img, 0, 0);
-              const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-              const colorCount = {};
-              let maxCount = 0;
-              let dominant = [0, 0, 0];
+        const colorCount = {};
+        let maxCount = 0;
+        let dominant = [0, 0, 0];
 
-              for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-                const key = `${r},${g},${b}`;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const key = `${r},${g},${b}`;
 
-                colorCount[key] = (colorCount[key] || 0) + 1;
+          colorCount[key] = (colorCount[key] || 0) + 1;
 
-                if (colorCount[key] > maxCount) {
-                  maxCount = colorCount[key];
-                  dominant = [r, g, b];
-                }
-              }
+          if (colorCount[key] > maxCount) {
+            maxCount = colorCount[key];
+            dominant = [r, g, b];
+          }
+        }
 
-              setBgColor(`rgb(${dominant[0]}, ${dominant[1]}, ${dominant[2]})`);
-              setTextColor(getComplementaryColor(dominant));
-            } catch (err) {
-              console.error("Fehler bei Farbextraktion:", err);
-            }
-          };
+        setBgColor(`rgb(${dominant[0]}, ${dominant[1]}, ${dominant[2]})`);
+        setTextColor(getComplementaryColor(dominant));
+      } catch (err) {
+        console.error("Fehler bei Farbextraktion:", err);
+      }
+    };
 
-          analyze();
-        }, [item.image]);
+    analyze();
+  }, [item.image]);
 
-        return (
-          <div
-            className="group relative -mr-4"
-            key={item.name}
-            onMouseEnter={() => setHoveredIndex(item.id)}
-            onMouseLeave={() => setHoveredIndex(null)}
-          >
-            {/* Unsichtbares Hilfsbild */}
-            <img
-              ref={imgRef}
-              src={item.image}
-              alt={item.name}
-              crossOrigin="anonymous"
-              style={{ display: "none" }}
-            />
+  return (
+      <div
+          className="group relative -mr-4"
+          onMouseEnter={() => setHoveredIndex(item.id)}
+          onMouseLeave={() => setHoveredIndex(null)}
+      >
+        <img
+            ref={imgRef}
+            src={item.image}
+            alt={item.name}
+            crossOrigin="anonymous"
+            style={{ display: "none" }}
+        />
 
-            {/* Tooltip */}
-            <AnimatePresence mode="popLayout">
-              {hoveredIndex === item.id && (
-                <motion.div
+        <AnimatePresence mode="popLayout">
+          {hoveredIndex === item.id && (
+              <motion.div
                   initial={{ opacity: 0, y: 20, scale: 0.6 }}
                   animate={{
                     opacity: 1,
@@ -127,35 +130,31 @@ export const AnimatedTooltip = ({ items }) => {
                     color: textColor,
                   }}
                   className="absolute -top-20 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center justify-center rounded-xl px-4 py-2 text-xs shadow-2xl"
-                >
-                  <div className="relative z-30 text-base font-bold">
-                    {item.name}
-                  </div>
-                  <div className="text-xs">{item.designation}</div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              >
+                <div className="relative z-30 text-base font-bold">
+                  {item.name}
+                </div>
+                <div className="text-xs">{item.designation}</div>
+              </motion.div>
+          )}
+        </AnimatePresence>
 
-            {/* GitHub Button (als Image klickbar) */}
-            <a
-              href={item.github}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${item.name} GitHub`}
-            >
-              <Image
-                onMouseMove={handleMouseMove}
-                height={100}
-                width={100}
-                src={item.image}
-                alt={item.name}
-                style={{ backgroundColor: bgColor }}
-                className="relative !m-0 h-20 w-20 rounded-full border-2 border-white object-cover object-top !p-0 transition duration-500 group-hover:z-30 group-hover:scale-105"
-              />
-            </a>
-          </div>
-        );
-      })}
-    </>
+        <a
+            href={item.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${item.name} GitHub`}
+        >
+          <Image
+              onMouseMove={handleMouseMove}
+              height={100}
+              width={100}
+              src={item.image}
+              alt={item.name}
+              style={{ backgroundColor: bgColor }}
+              className="relative !m-0 h-20 w-20 rounded-full border-2 border-white object-cover object-top !p-0 transition duration-500 group-hover:z-30 group-hover:scale-105"
+          />
+        </a>
+      </div>
   );
-};
+}
