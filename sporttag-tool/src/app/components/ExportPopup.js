@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
+
 
 export default function ExportPopup({ onClose }) {
     const [step, setStep] = useState(1);

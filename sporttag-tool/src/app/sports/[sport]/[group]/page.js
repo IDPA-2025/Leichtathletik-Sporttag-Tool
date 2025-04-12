@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Loader2, CheckCircle, ClipboardList } from "lucide-react";
 import BackButton from "@/app/components/BackButton";
 
+
 export default function GroupResults() {
     // Get URL parameters
     const { sport, group } = useParams();

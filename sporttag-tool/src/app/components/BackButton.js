@@ -4,6 +4,7 @@ import { ArrowLeft, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import ExportPopup from "@/app/components/ExportPopup";
 
+
 export default function BackButton() {
     const router = useRouter();
     const [showExport, setShowExport] = useState(false);
@@ -12,10 +13,15 @@ export default function BackButton() {
     useEffect(() => {
         const fetchRole = async () => {
             try {
-                const res = await fetch("/api/me", { cache: "no-store",                 credentials: "include",});
+                const res = await fetch("/api/me", { cache: "no-store", credentials: "include",});
                 if (!res.ok) {
                     if (res.status === 403) {
                         router.push("/login");
+                        return;
+                    }
+                    if (res.status === 401) {
+                        console.warn("Token abgelaufen. Weiterleitung zur Login-Seite...");
+                        window.location.href = "/login";
                         return;
                     }
                     setRole(null);

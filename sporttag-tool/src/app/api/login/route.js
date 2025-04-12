@@ -30,7 +30,7 @@ export async function POST(req) {
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '1d' }
         );
 
         const cookie = serialize('authToken', token, {
@@ -38,7 +38,7 @@ export async function POST(req) {
             secure: process.env.NODE_ENV === "production",
             sameSite: "Strict",
             path: "/",
-            maxAge: 60 * 60 * 3 // 3 Stunden
+            maxAge: 60 * 60 * 24
         });
 
         const response = NextResponse.json({ success: true, role: user.role });

@@ -7,6 +7,7 @@ import Image from "next/image"
 import PlaceholderImage from "../../../public/placeholder.png"
 import BackButton from "@/app/components/BackButton";
 
+
 export default function SportsOverview() {
     const [sports, setSports] = useState([])
 

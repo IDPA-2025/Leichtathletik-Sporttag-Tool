@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation"
 import BackButton from "@/app/components/BackButton";
 
+
 export default function GroupOverview() {
     const { sport } = useParams();
     const [groups, setGroups] = useState([]);
