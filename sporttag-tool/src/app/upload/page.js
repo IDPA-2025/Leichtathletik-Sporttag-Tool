@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useRef, useState} from "react";
-import { Upload } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
 import BackButton from "@/app/components/BackButton";
 import DateSelect from "@/app/components/DateSelect";
 import { Pencil, X } from "lucide-react";
@@ -56,11 +56,39 @@ export default function UploadPage() {
     } else {
       document.body.style.overflow = "";
     }
-  
+
     return () => {
       document.body.style.overflow = "";
     };
   }, [showMobileEditModal]);
+
+  const resetSporttag = async () => {
+    const firstConfirm = window.confirm("⚠️ Bist du sicher, dass du ALLE Daten des Sporttags löschen möchtest?");
+    if (!firstConfirm) return;
+
+    const secondConfirm = window.prompt("Gib 'SPORTTAG ZURÜCKSETZEN' ein, um den Löschvorgang zu bestätigen:");
+    if (secondConfirm !== "SPORTTAG ZURÜCKSETZEN") {
+      alert("❌ Vorgang abgebrochen. Falsche Bestätigungseingabe.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/reset-sporttag", {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Fehler beim Zurücksetzen");
+
+      alert("✅ Sporttag wurde erfolgreich zurückgesetzt.");
+      setClasses([]);
+      setStudents([]);
+    } catch (err) {
+      alert("Fehler beim Zurücksetzen: " + err.message);
+    }
+  };
+
 
   const detectSeparator = (text) => text.includes(";") ? ";" : ",";
 
@@ -310,6 +338,14 @@ export default function UploadPage() {
   <div className="w-full sm:w-auto">
     <DateSelect />
   </div>
+          {/* Zurücksetzen Button */}
+  <button
+      onClick={resetSporttag}
+      className="mt-4 w-full text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+  >
+    <Trash2 className="w-4 h-4" />
+    Sporttag zurücksetzen
+  </button>
 </div>
 
           <div className="basis-0 grow w-full flex flex-col items-center gap-6">
@@ -479,6 +515,7 @@ export default function UploadPage() {
             {loading ? "Speichert..." : "Speichern"}
           </span>
         </button>
+
       </div>
     </div>
   </div>
