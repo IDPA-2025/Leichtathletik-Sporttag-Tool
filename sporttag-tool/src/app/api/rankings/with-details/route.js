@@ -5,7 +5,6 @@ import {requireAnyRole} from "@/app/lib/auth";
 export async function GET(req) {
     const user = requireAnyRole(req, ["teacher"]);
 
-
     try {
         const { data: students, error: studentError } = await supabase
             .from("students")
@@ -70,13 +69,23 @@ export async function GET(req) {
         const gruppierteRanglisten = {};
 
         for (const eintrag of daten) {
-            const key = `${eintrag.kategorie}-${eintrag.geschlecht}`;
-            if (!gruppierteRanglisten[key]) {
-                gruppierteRanglisten[key] = [];
+            // For preset1 (age category grouping)
+            // Using "__" as a separator to avoid conflicts with hyphens in age categories
+            const keyCategory = `category__${eintrag.kategorie}__${eintrag.geschlecht}`;
+            if (!gruppierteRanglisten[keyCategory]) {
+                gruppierteRanglisten[keyCategory] = [];
             }
-            gruppierteRanglisten[key].push(eintrag);
+            gruppierteRanglisten[keyCategory].push(eintrag);
+
+            // For preset2 (class grouping)
+            const keyClass = `class__${eintrag.klasse}__${eintrag.geschlecht}`;
+            if (!gruppierteRanglisten[keyClass]) {
+                gruppierteRanglisten[keyClass] = [];
+            }
+            gruppierteRanglisten[keyClass].push(eintrag);
         }
 
+        // Sort all rankings
         for (const key in gruppierteRanglisten) {
             gruppierteRanglisten[key].sort((a, b) => b.total_points - a.total_points);
         }

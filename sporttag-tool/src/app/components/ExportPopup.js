@@ -185,7 +185,6 @@ export default function ExportPopup({ onClose }) {
             const response = await fetch("/api/students/calculate-grade", {
                 method: "POST",
                 credentials: "include",
-                body: JSON.stringify({ filters }),
                 headers: { "Content-Type": "application/json" }
             });
 
@@ -195,6 +194,9 @@ export default function ExportPopup({ onClose }) {
                 throw new Error(result.error || "Fehler bei der Notenberechnung");
             }
 
+            // ✨ Neu: Kleine künstliche Pause, um Supabase-Updates sicher abzuschließen
+            await new Promise(resolve => setTimeout(resolve, 300)); // 300ms Delay
+
             setMessage(`✅ Noten für ${result.updated} Schüler aktualisiert`);
         } catch (error) {
             console.error("Fehler bei der Notenberechnung:", error);
@@ -203,6 +205,7 @@ export default function ExportPopup({ onClose }) {
             setIsGenerating(false);
         }
     };
+
 
     return (
         <div className="fixed inset-0 bg-black/20 z-50 flex items-end justify-center">

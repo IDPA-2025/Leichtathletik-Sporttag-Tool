@@ -50,7 +50,22 @@ export async function POST(req) {
         if (mode === "preset") {
             console.log("🔑 Rankings-Keys:", Object.keys(rankings));
 
-            for (const [key, list] of Object.entries(rankings)) {
+            // Filter keys based on preset
+            const keyPrefix = preset === "preset1" ? "category__" : "class__";
+            const relevantKeys = Object.keys(rankings).filter(key => key.startsWith(keyPrefix));
+
+            for (const key of relevantKeys) {
+                // Now split by "__" instead of "-"
+                const parts = key.split("__");
+                // parts[0] is "category" or "class"
+                // parts[1] is the actual category or class value
+                // parts[2] is the gender
+
+                const type = parts[0];        // "category" or "class"
+                const value = parts[1];       // The category value or class value
+                const geschlecht = parts[2];  // The gender
+
+                const list = rankings[key];
                 let rankCounter = 1;
                 listen[key] = list
                     .map((s) => ({
@@ -94,18 +109,10 @@ export async function POST(req) {
                     }
                 };
 
-                if (preset === "preset1") {
-                    const parts = key.split("-");
-                    const geschlecht = parts.at(-1);
-                    const kategorie = parts.slice(0, -1).join("-");
-
-                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${formatAgeCategory(kategorie)}`;
-                } else if (preset === "preset2") {
-                    const parts = key.split("-");
-                    const geschlecht = parts.at(-1);
-                    const klasse = parts.slice(0, -1).join("-");
-
-                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${klasse}`;
+                if (type === "category") {
+                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${formatAgeCategory(value)}`;
+                } else if (type === "class") {
+                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${value}`;
                 }
             }
         } else {
@@ -113,6 +120,13 @@ export async function POST(req) {
             for (const list of Object.values(rankings)) {
                 allStudents = [...allStudents, ...list];
             }
+
+            const seenIds = new Set();
+            allStudents = allStudents.filter(s => {
+                if (seenIds.has(s.id)) return false;
+                seenIds.add(s.id);
+                return true;
+            });
 
             allStudents = allStudents.map(s => ({
                 ...s,
