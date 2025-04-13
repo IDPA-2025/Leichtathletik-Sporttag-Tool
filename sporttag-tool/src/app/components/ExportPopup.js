@@ -353,7 +353,7 @@ export default function ExportPopup({ onClose }) {
 
                 <div className="mt-6 text-center">
                     <button onClick={onClose} className="text-sm text-gray-500 hover:underline">
-                        Fenster schließen
+                        Fenster schliessen
                     </button>
                 </div>
             </div>

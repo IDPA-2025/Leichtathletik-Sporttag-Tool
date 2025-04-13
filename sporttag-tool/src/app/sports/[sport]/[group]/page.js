@@ -691,7 +691,7 @@ export default function GroupResults() {
                                 onClick={() => setShowScale(false)}
                                 className="inline-flex items-center gap-2 border-2 border-blue-600 text-blue-600 px-5 py-2 rounded-md hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                             >
-                                Schließen
+                                Schliessen
                             </button>
                         </div>
                     </div>

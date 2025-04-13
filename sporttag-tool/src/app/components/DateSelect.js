@@ -152,7 +152,7 @@ useEffect(() => {
         }
     }, []);
 
-    // Schließe das Popup beim Klick außerhalb
+    // Schliesse das Popup beim Klick ausserhalb
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
@@ -211,7 +211,7 @@ useEffect(() => {
         <div className="w-full max-w-md mx-auto text-gray-900 relative">
             <div className="bg-white rounded-lg p-8 shadow-lg flex flex-col items-center">
                 <p>Datum des Sporttages</p>
-                {/* Großes Datum Anzeige */}
+                {/* Grosses Datum Anzeige */}
                 <div className="text-center mb-8">
                     <div className="text-8xl font-bold">
                         {selectedDate ? selectedDate.getDate() : "--"}
