@@ -27,7 +27,7 @@ export async function POST(req) {
         const updates = [];
 
         for (const student of students) {
-            const { id, age_category, geschlecht } = student;
+            const { id } = student;
             const studentResults = resultMap[id] || [];
 
             // 🔢 Punkte berechnen (nur gültige, nicht übersprungene Disziplinen)
@@ -35,28 +35,16 @@ export async function POST(req) {
                 .filter(r => r.points !== null && r.skipped !== true)
                 .reduce((sum, r) => sum + r.points, 0);
 
-            let finalGrade = null;
+            // 📘 Neue Logik: Immer Durchschnittsnote verwenden (auch wenn kein Skip)
+            const validGrades = studentResults
+                .filter(r => r.grade !== null)
+                .map(r => r.grade);
 
-            const hasSkipped = studentResults.some(r => r.skipped === true);
+            let finalGrade = 1; // Fallback
 
-            if (hasSkipped) {
-                const validGrades = studentResults
-                    .filter(r => r.skipped !== true && r.grade !== null)
-                    .map(r => r.grade);
-
-                if (validGrades.length > 0) {
-                    const avg = validGrades.reduce((sum, g) => sum + g, 0) / validGrades.length;
-                    finalGrade = parseFloat(avg.toFixed(2));
-                } else {
-                    finalGrade = 1;
-                }
-            } else {
-                const passendeNote = grades
-                    .filter(g => g.gender === geschlecht && g.age_category === age_category)
-                    .sort((a, b) => b.points_min - a.points_min)
-                    .find(g => totalPoints >= g.points_min);
-
-                finalGrade = passendeNote?.grade ?? 1;
+            if (validGrades.length > 0) {
+                const avg = validGrades.reduce((sum, g) => sum + g, 0) / validGrades.length;
+                finalGrade = Math.round(avg * 4) / 4;
             }
 
             updates.push({ id, grade: finalGrade, total_points: totalPoints });
@@ -81,8 +69,6 @@ export async function POST(req) {
                 return new Response(JSON.stringify({ error: error.message }), { status: 500 });
             }
         }
-
-
 
         return new Response(JSON.stringify({ success: true, updated: updates.length }), { status: 200 });
     } catch (err) {
