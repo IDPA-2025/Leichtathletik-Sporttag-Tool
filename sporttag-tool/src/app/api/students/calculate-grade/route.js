@@ -62,21 +62,27 @@ export async function POST(req) {
             updates.push({ id, grade: finalGrade, total_points: totalPoints });
         }
 
-        // In Datenbank schreiben
-        for (const update of updates) {
-            const { error } = await supabase
+        const updatePromises = updates.map(update =>
+            supabase
                 .from("students")
                 .update({
                     grade: update.grade,
                     total_points: update.total_points
                 })
-                .eq("id", update.id);
+                .eq("id", update.id)
+        );
 
+        const updateResults = await Promise.all(updatePromises);
+
+        for (let i = 0; i < updateResults.length; i++) {
+            const { error } = updateResults[i];
             if (error) {
-                console.error(`❌ Fehler bei Update von ${update.id}:`, error);
+                console.error(`❌ Fehler bei Update von ${updates[i].id}:`, error);
                 return new Response(JSON.stringify({ error: error.message }), { status: 500 });
             }
         }
+
+
 
         return new Response(JSON.stringify({ success: true, updated: updates.length }), { status: 200 });
     } catch (err) {
