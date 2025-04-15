@@ -9,7 +9,7 @@ export async function POST(req) {
         const cookie = req.headers.get("cookie");
         const { origin } = new URL(req.url);
 
-        const rankingsRes = await fetch(`${origin}/api/rankings/with-details`, {
+        const rankingsRes = await fetch(`/api/rankings/with-details`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
