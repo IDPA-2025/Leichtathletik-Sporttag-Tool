@@ -7,9 +7,11 @@ export async function POST(req) {
         const { mode, preset, filters, showDetails, showGrades } = await req.json();
 
         const cookie = req.headers.get("cookie");
-        const { origin } = new URL(req.url);
+        const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+        const host = req.headers.get("host");
+        const baseUrl = `${protocol}://${host}`;
 
-        const rankingsRes = await fetch(`/api/rankings/with-details`, {
+        const rankingsRes = await fetch(`${baseUrl}/api/rankings/with-details`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
