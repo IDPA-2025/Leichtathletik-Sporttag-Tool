@@ -60,7 +60,6 @@ export async function POST(req) {
 
         // 📌 Modus: Preset-Filterung (nach Kategorie oder Klasse)
         if (mode === "preset") {
-            console.log("🔑 Rankings-Keys:", Object.keys(rankings));
 
             // Filter keys based on preset
             const keyPrefix = preset === "preset1" ? "category__" : "class__";
