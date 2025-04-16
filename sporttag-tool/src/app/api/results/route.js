@@ -32,7 +32,7 @@ async function fetchPointData({ gender, sportCode, bestResult, timeMeasure }) {
 
     const response = await supabase
         .from("points_table")
-        .select("performance, points")
+        .select("performance, punkte")
         .eq("gender", gender)
         .eq("sport_code", sportCode)
         .order("performance", { ascending: timeMeasure });
@@ -81,7 +81,7 @@ export async function POST(req) {
 
             // Punkte bestimmen (oder null)
             let pointData = bestResult === 0
-                ? [{ points: null }]
+                ? [{ punkte: null }]
                 : await fetchPointData({
                     gender: studentInfo.gender,
                     sportCode: sport,
@@ -89,7 +89,7 @@ export async function POST(req) {
                     timeMeasure: sportConfig.time_measure
                 });
 
-            const points = pointData.length > 0 ? pointData[0].points : 0;
+            const points = pointData.length > 0 ? pointData[0].punkte : 0;
 
             // Note berechnen
             let note = null;
