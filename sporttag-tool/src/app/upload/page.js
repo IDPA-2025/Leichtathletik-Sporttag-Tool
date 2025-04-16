@@ -104,11 +104,11 @@ export default function UploadPage() {
       if (lines.length < 2) return;
 
       const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
-      const nachnameIndex = headers.indexOf("surname");
-      const vornameIndex = headers.indexOf("name");
+      const nachnameIndex = headers.indexOf("nachname");
+      const vornameIndex = headers.indexOf("vorname");
       const geburtsdatumIndex = headers.indexOf("geburtstag");
       const anredeIndex = headers.indexOf("anrede");
-      const klasseIndex = headers.indexOf("class_group");
+      const klasseIndex = headers.indexOf("klasse");
 
       if ([nachnameIndex, vornameIndex, geburtsdatumIndex, anredeIndex, klasseIndex].includes(-1)) {
         alert("Die CSV-Datei enthält nicht alle erforderlichen Spalten!");
