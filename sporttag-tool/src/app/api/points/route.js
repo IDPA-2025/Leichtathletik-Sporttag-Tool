@@ -17,10 +17,10 @@ export async function GET(req) {
     // Punktetabelle aus Supabase abfragen
     const { data, error } = await supabase
         .from("points_table")
-        .select("leistung, punkte")
+        .select("performance, points")
         .eq("sport_code", sport)
         .eq("gender", gender)
-        .order("leistung", { ascending: false });
+        .order("performance", { ascending: false });
 
     // Fehler bei der Abfrage → Internal Server Error
     if (error) {

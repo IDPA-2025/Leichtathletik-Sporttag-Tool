@@ -124,8 +124,8 @@ export default function UploadPage() {
           date_of_birth,
           gender: values[anredeIndex] === "Herr" ? "maennlich" : "weiblich",
           class_group: values[klasseIndex] || "",
-          helfer: false,
-          anwesend: true,
+          assistant_bool: false,
+          present_bool: true,
         };
       }).filter(student => student.surname && student.name && student.class_group);
 
@@ -162,8 +162,8 @@ export default function UploadPage() {
   
     const updatedStudents = students.map((student, index) => ({
       ...student,
-      helfer: helpers.includes(index),
-      anwesend: !absentees.includes(index),
+      assistant_bool: helpers.includes(index),
+      present_bool: !absentees.includes(index),
     }));
   
     try {
@@ -253,8 +253,8 @@ export default function UploadPage() {
       }
 
       setStudents(data);
-      setHelpers(data.map((s, i) => s.helfer ? i : null).filter(i => i !== null));
-      setAbsentees(data.map((s, i) => !s.anwesend ? i : null).filter(i => i !== null));
+      setHelpers(data.map((s, i) => s.assistant_bool ? i : null).filter(i => i !== null));
+      setAbsentees(data.map((s, i) => !s.present_bool ? i : null).filter(i => i !== null));
     } catch (error) {
       console.error("Fehler beim Laden der Klasse:", error);
       alert(`Fehler beim Laden: ${error.message}`);

@@ -85,21 +85,21 @@ export async function POST(req) {
                         total_points: studentMap[s.id]?.total_points || 0,
                         grade: studentMap[s.id]?.grade,
                         resultDetails: resultsMap[s.id] || {},
-                        helfer: studentMap[s.id]?.helfer,
-                        anwesend: studentMap[s.id]?.anwesend
+                        assistant_bool: studentMap[s.id]?.assistant_bool,
+                        present_bool: studentMap[s.id]?.present_bool
                     }))
                     .sort((a, b) => {
                         // Sortierlogik: Anwesenheit → Helfer → Punkte
-                        if (!a.anwesend && b.anwesend) return 1;
-                        if (a.anwesend && !b.anwesend) return -1;
-                        if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
-                        if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
+                        if (!a.present_bool && b.present_bool) return 1;
+                        if (a.present_bool && !b.present_bool) return -1;
+                        if (a.assistant_bool && !b.assistant_bool && a.present_bool && b.present_bool) return 1;
+                        if (!a.assistant_bool && b.assistant_bool && a.present_bool && b.present_bool) return -1;
                         return b.total_points - a.total_points;
                     })
                     .map(student => {
-                        if (student.anwesend === true && student.helfer === false) {
+                        if (student.present_bool === true && student.assistant_bool === false) {
                             student.rang = rankCounter++;
-                        } else if (student.anwesend === false) {
+                        } else if (student.present_bool === false) {
                             student.rang = "Abwesend";
                         } else {
                             student.rang = "Helfer";
@@ -151,8 +151,8 @@ export async function POST(req) {
                 total_points: studentMap[s.id]?.total_points || 0,
                 grade: studentMap[s.id]?.grade,
                 resultDetails: resultsMap[s.id] || {},
-                helfer: studentMap[s.id]?.helfer,
-                anwesend: studentMap[s.id]?.anwesend
+                assistant_bool: studentMap[s.id]?.assistant_bool,
+                present_bool: studentMap[s.id]?.present_bool
             }));
 
             // Filter anwenden
@@ -180,15 +180,15 @@ export async function POST(req) {
             // Sortieren + Ränge
             let rankCounter = 1;
             filteredStudents = filteredStudents.sort((a, b) => {
-                if (!a.anwesend && b.anwesend) return 1;
-                if (a.anwesend && !b.anwesend) return -1;
-                if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
-                if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
+                if (!a.present_bool && b.present_bool) return 1;
+                if (a.present_bool && !b.present_bool) return -1;
+                if (a.assistant_bool && !b.assistant_bool && a.present_bool && b.present_bool) return 1;
+                if (!a.assistant_bool && b.assistant_bool && a.present_bool && b.present_bool) return -1;
                 return b.total_points - a.total_points;
             }).map(student => {
-                if (student.anwesend === true && student.helfer === false) {
+                if (student.present_bool === true && student.assistant_bool === false) {
                     student.rang = rankCounter++;
-                } else if (student.anwesend === false) {
+                } else if (student.present_bool === false) {
                     student.rang = "Abwesend";
                 } else {
                     student.rang = "Helfer";

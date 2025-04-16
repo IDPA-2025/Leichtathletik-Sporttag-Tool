@@ -32,10 +32,10 @@ async function fetchPointData({ gender, sportCode, bestResult, timeMeasure }) {
 
     const response = await supabase
         .from("points_table")
-        .select("leistung, punkte")
+        .select("performance, points")
         .eq("gender", gender)
         .eq("sport_code", sportCode)
-        .order("leistung", { ascending: timeMeasure });
+        .order("performance", { ascending: timeMeasure });
 
     if (response.error) {
         console.error("[fetchPointData] Fehler:", response.error);
@@ -44,7 +44,7 @@ async function fetchPointData({ gender, sportCode, bestResult, timeMeasure }) {
 
     // passenden Eintrag filtern
     const sorted = response.data.filter(row =>
-        timeMeasure ? row.leistung >= bestResult : row.leistung <= bestResult
+        timeMeasure ? row.performance >= bestResult : row.performance <= bestResult
     );
 
     console.log("[fetchPointData] Gefundene Punktdaten:", sorted[0]);
@@ -81,7 +81,7 @@ export async function POST(req) {
 
             // Punkte bestimmen (oder null)
             let pointData = bestResult === 0
-                ? [{ punkte: null }]
+                ? [{ points: null }]
                 : await fetchPointData({
                     gender: studentInfo.gender,
                     sportCode: sport,
@@ -89,17 +89,17 @@ export async function POST(req) {
                     timeMeasure: sportConfig.time_measure
                 });
 
-            const punkte = pointData.length > 0 ? pointData[0].punkte : 0;
+            const points = pointData.length > 0 ? pointData[0].points : 0;
 
             // Note berechnen
             let note = null;
-            if (!isSkipped && punkte !== null) {
+            if (!isSkipped && points !== null) {
                 const { data: gradeData, error: gradeError } = await supabase
                     .from("grades_table")
                     .select("grade")
                     .eq("gender", studentInfo.gender)
                     .eq("age_category", studentInfo.age_category)
-                    .lte("average_points_per_category", punkte)
+                    .lte("average_points_per_category", points)
                     .order("average_points_per_category", { ascending: false })
                     .limit(1);
 
@@ -117,7 +117,7 @@ export async function POST(req) {
                 attempt_results: sportConfig.checkFails ? results[student.id] : null,
                 scores: !sportConfig.checkFails ? scores[student.id] : null,
                 best_result: isSkipped ? null : bestResult,
-                points: isSkipped ? null : punkte,
+                points: isSkipped ? null : points,
                 skipped: isSkipped,
                 grade: isSkipped ? null : note
             };

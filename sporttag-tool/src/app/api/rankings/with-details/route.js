@@ -8,7 +8,7 @@ export async function GET(req) {
         // Schülerdaten abrufen
         const { data: students, error: studentError } = await supabase
             .from("students")
-            .select("id, name, surname, class_group, date_of_birth, gender, age_category, grade, anwesend, total_points, helfer")
+            .select("id, name, surname, class_group, date_of_birth, gender, age_category, grade, present_bool, total_points, assistant_bool")
 
         if (studentError) {
             throw new Error("Fehler beim Laden der Schüler: " + studentError.message);
@@ -40,10 +40,10 @@ export async function GET(req) {
         }
 
         // Punkte in DB zurückschreiben (optional, falls noch nicht gespeichert)
-        for (const [studentId, punkte] of punkteMap.entries()) {
+        for (const [studentId, points] of punkteMap.entries()) {
             await supabase
                 .from("students")
-                .update({ total_points: punkte })
+                .update({ total_points: points })
                 .eq("id", studentId);
         }
 
@@ -58,8 +58,8 @@ export async function GET(req) {
             kategorie: s.age_category,
             total_points: s.total_points || 0,
             grade: s.grade,
-            helfer: s.helfer,
-            anwesend: s.anwesend
+            assistant_bool: s.assistant_bool,
+            present_bool: s.present_bool
         }));
 
         // Rankings nach Alterskategorie & Klasse gruppieren

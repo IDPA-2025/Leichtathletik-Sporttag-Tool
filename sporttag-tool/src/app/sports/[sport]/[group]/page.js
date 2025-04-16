@@ -329,8 +329,8 @@ export default function GroupResults() {
     // Filter and sort students when search query changes
     useEffect(() => {
         const result = students.filter(student => {
-            const present = student.anwesend === true;
-            const notHelper = !student.helfer;
+            const present = student.present_bool === true;
+            const notHelper = !student.assistant_bool;
             const matches = !searchQuery || `${student.name} ${student.surname}`.toLowerCase().includes(searchQuery.toLowerCase());
             return present && notHelper && matches;
         });
@@ -610,8 +610,8 @@ export default function GroupResults() {
                                             <tbody className="bg-white divide-y divide-gray-200">
                                             {data.map((row, i) => (
                                                 <tr key={i} className="hover:bg-blue-50 transition-colors duration-200">
-                                                    <td className="px-4 py-2">{row.leistung} {sportConfig.unit}</td>
-                                                    <td className="px-4 py-2 text-right font-medium">{row.punkte}</td>
+                                                    <td className="px-4 py-2">{row.performance} {sportConfig.unit}</td>
+                                                    <td className="px-4 py-2 text-right font-medium">{row.points}</td>
                                                 </tr>
                                             ))}
                                             </tbody>
@@ -674,8 +674,8 @@ export default function GroupResults() {
                                                 <tbody className="bg-white">
                                                 {data.map((row, j) => (
                                                     <tr key={j} className="hover:bg-blue-50 transition-colors">
-                                                        <td className="px-4 py-2">{row.leistung} {sportConfig.unit}</td>
-                                                        <td className="px-4 py-2 text-right font-medium">{row.punkte}</td>
+                                                        <td className="px-4 py-2">{row.performance} {sportConfig.unit}</td>
+                                                        <td className="px-4 py-2 text-right font-medium">{row.points}</td>
                                                     </tr>
                                                 ))}
                                                 </tbody>
