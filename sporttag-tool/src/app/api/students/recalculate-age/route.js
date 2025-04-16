@@ -2,6 +2,7 @@
 import { supabase } from "../../../lib/supabaseClient";
 import {requireAnyRole} from "@/app/lib/auth";
 
+// Alterskategorie anhand Geburtsdatum und Veranstaltungsdatum berechnen
 function calculateAgeCategory(geburtsdatum, veranstaltungsDatumStr) {
     const veranstaltungsDatum = new Date(veranstaltungsDatumStr);
     const geburtsdatumDate = new Date(geburtsdatum);
@@ -14,9 +15,11 @@ function calculateAgeCategory(geburtsdatum, veranstaltungsDatumStr) {
     return "18+";
 }
 
+// Alterskategorien aller Schüler neu berechnen
 export async function POST(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
     try {
+        // Sporttag-Datum laden
         const { data: sportdayData, error: dateError } = await supabase
             .from("sportdays")
             .select("date")
@@ -29,6 +32,7 @@ export async function POST(req) {
 
         const veranstaltungsDatum = sportdayData.date;
 
+        // Schüler laden
         const { data: students, error: studentError } = await supabase
             .from("students")
             .select("id, geburtsdatum");
@@ -38,12 +42,13 @@ export async function POST(req) {
             return new Response(JSON.stringify({ error: studentError.message }), { status: 500 });
         }
 
+        // Neue Alterskategorien berechnen
         const updates = students.map((student) => ({
             id: student.id,
             age_category: calculateAgeCategory(student.geburtsdatum, veranstaltungsDatum),
         }));
 
-        // Performanter: ein einziger Aufruf mit upsert()
+        // Alterskategorien speichern
         for (const update of updates) {
             const { error: updateError } = await supabase
                 .from("students")

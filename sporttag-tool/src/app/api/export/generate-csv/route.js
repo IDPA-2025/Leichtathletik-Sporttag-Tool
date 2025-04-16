@@ -1,15 +1,15 @@
-// /api/export/generate-csv/route.js
 import {requireAnyRole} from "@/app/lib/auth";
 
+// Nur Lehrer dürfen diese Route nutzen
 export async function POST(req) {
-
     const user = requireAnyRole(req, ["teacher"]);
 
     try {
+        // Eingabedaten aus dem Request lesen
         const { exportData, showDetails, showGrades } = await req.json();
         const { ranglisten, titles, sportHeaders, sportUnitMap, sportNameMap } = exportData;
 
-        // Die formatDisziplinZelle Funktion aus dem Frontend
+        // Einzelne Zelle für eine Disziplin formatieren
         const formatDisziplinZelle = (s, sport, sportUnitMap) => {
             if (s.helfer) return "-";
             const detail = s.resultDetails?.[sport];
@@ -28,12 +28,12 @@ export async function POST(req) {
             return parts.join(" | ");
         };
 
-        // Die generateDisziplinZellen Funktion aus dem Frontend
+        // Alle Disziplin-Zellen für einen Schüler generieren
         const generateDisziplinZellen = (s, sportHeaders, sportUnitMap) => {
             return sportHeaders.map(sport => formatDisziplinZelle(s, sport, sportUnitMap));
         };
 
-        // Die generateExportRow Funktion aus dem Frontend
+        // Komplette Zeile für einen Schüler generieren
         const generateExportRow = (s, i, sportHeaders, sportUnitMap) => {
             const rankDisplay = s.rang || (s.helfer ? "Helfer" : (i + 1));
             return [
@@ -48,12 +48,17 @@ export async function POST(req) {
         };
 
         let csv = "";
+
+        // Jede Rangliste durchgehen
         Object.keys(ranglisten).forEach((key) => {
             const list = ranglisten[key];
 
             if (list.length === 0) return;
 
+            // Titel schreiben
             csv += `\n"${titles[key] || key}"\n`;
+
+            // Kopfzeile
             const headers = [
                 "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
                 ...(showGrades ? ["Note"] : []),
@@ -69,6 +74,7 @@ export async function POST(req) {
             });
         });
 
+        // CSV zurückgeben
         return new Response(csv, {
             headers: {
                 'Content-Type': 'text/csv;charset=utf-8;',

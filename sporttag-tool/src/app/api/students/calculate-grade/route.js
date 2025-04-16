@@ -1,11 +1,12 @@
 import { supabase } from "../../../lib/supabaseClient";
 import { requireAnyRole } from "@/app/lib/auth";
 
+// Noten und Gesamtpunkte für alle Schüler neu berechnen
 export async function POST(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
 
     try {
-        // Alle relevanten Daten laden
+        // Schüler, Notenskala, Resultate laden
         const [{ data: students, error: studentError }, { data: grades, error: gradesError }, { data: results, error: resultsError }] = await Promise.all([
             supabase.from("students").select("id, age_category, geschlecht"),
             supabase.from("grades_table").select("points_min, grade, gender, age_category"),
@@ -17,7 +18,7 @@ export async function POST(req) {
             return new Response(JSON.stringify({ error: message }), { status: 500 });
         }
 
-        // Gruppieren der Resultate pro Schüler
+        // Resultate nach Schüler gruppieren
         const resultMap = results.reduce((acc, r) => {
             if (!acc[r.student_id]) acc[r.student_id] = [];
             acc[r.student_id].push(r);
@@ -30,17 +31,17 @@ export async function POST(req) {
             const { id } = student;
             const studentResults = resultMap[id] || [];
 
-            // 🔢 Punkte berechnen (nur gültige, nicht übersprungene Disziplinen)
+            // Nur gültige Punkte summieren
             const totalPoints = studentResults
                 .filter(r => r.points !== null && r.skipped !== true)
                 .reduce((sum, r) => sum + r.points, 0);
 
-            // 📘 Neue Logik: Immer Durchschnittsnote verwenden (auch wenn kein Skip)
+            // Nur vorhandene Noten berücksichtigen
             const validGrades = studentResults
                 .filter(r => r.grade !== null)
                 .map(r => r.grade);
 
-            let finalGrade = 1; // Fallback
+            let finalGrade = 1;
 
             if (validGrades.length > 0) {
                 const avg = validGrades.reduce((sum, g) => sum + g, 0) / validGrades.length;
@@ -50,6 +51,7 @@ export async function POST(req) {
             updates.push({ id, grade: finalGrade, total_points: totalPoints });
         }
 
+        // Updates ausführen
         const updatePromises = updates.map(update =>
             supabase
                 .from("students")
@@ -62,6 +64,7 @@ export async function POST(req) {
 
         const updateResults = await Promise.all(updatePromises);
 
+        // Fehler prüfen
         for (let i = 0; i < updateResults.length; i++) {
             const { error } = updateResults[i];
             if (error) {

@@ -1,12 +1,12 @@
-// /app/api/sportday/get-date/route.js
 
 import { supabase } from "@/app/lib/supabaseClient";
 
+// Sporttag-Datum abrufen
 export async function GET() {
     const { data, error } = await supabase
         .from("sportdays")
         .select("date")
-        .single();
+        .single(); // erwartet genau einen Eintrag
 
     if (error) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });

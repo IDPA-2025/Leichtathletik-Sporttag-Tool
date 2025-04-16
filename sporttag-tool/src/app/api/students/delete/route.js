@@ -1,19 +1,28 @@
 import { supabase } from "../../../lib/supabaseClient";
 import {requireAnyRole} from "@/app/lib/auth";
 
+// Schüler einer Klasse löschen
 export async function DELETE(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
     const { klasse } = await req.json();
 
+    // Klasse prüfen
     if (!klasse) {
         return new Response(JSON.stringify({ error: "Klasse fehlt" }), { status: 400 });
     }
 
-    const { error } = await supabase.from("students").delete().eq("klasse", klasse);
+    // Schüler aus Klasse löschen
+    const { error } = await supabase
+        .from("students")
+        .delete()
+        .eq("klasse", klasse);
 
     if (error) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    // Erfolg zurückgeben
+    return new Response(JSON.stringify({
+        success: true
+    }), { status: 200 });
 }

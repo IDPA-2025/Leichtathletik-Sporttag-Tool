@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabaseClient";
 import {requireAnyRole} from "@/app/lib/auth";
 
+// Alle Sportarten abrufen (id, code, name, svg_url)
 export async function GET(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
 

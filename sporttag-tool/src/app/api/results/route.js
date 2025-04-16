@@ -1,11 +1,13 @@
 import { supabase } from "../../lib/supabaseClient";
 import { requireAnyRole } from "@/app/lib/auth";
 
+// Bestleistung je nach Konfiguration berechnen
 function getBestResult(scoresRaw, heightsRaw, resultsRaw, config) {
     const scores = Array.isArray(scoresRaw) ? scoresRaw : [];
     const heights = Array.isArray(heightsRaw) ? heightsRaw : [];
     const results = Array.isArray(resultsRaw) ? resultsRaw : [];
 
+    // z.B. Hochsprung (Versuchslogik)
     if (config.time_measure === false && config.checkFails === true) {
         const heightResults = heights.map((val, i) =>
             results[i] === true ? parseFloat(val) || 0 : 0
@@ -13,15 +15,18 @@ function getBestResult(scoresRaw, heightsRaw, resultsRaw, config) {
         return Math.max(...heightResults);
     }
 
+    // z.B. Sprint (Zeitmessung)
     if (config.time_measure === true) {
         const numeric = scores.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
         return numeric.length > 0 ? Math.min(...numeric) : 0;
     }
 
+    // z.B. Weitsprung, Kugelstossen (Weite)
     const numeric = scores.map(v => parseFloat(v)).filter(v => !isNaN(v));
     return numeric.length > 0 ? Math.max(...numeric) : 0;
 }
 
+// Punktwert aus Punktetabelle abrufen
 async function fetchPointData({ geschlecht, sportCode, bestResult, timeMeasure }) {
     console.log(`[fetchPointData] Suche Punktzahl für ${geschlecht}, ${sportCode}, Ergebnis: ${bestResult}`);
 
@@ -37,6 +42,7 @@ async function fetchPointData({ geschlecht, sportCode, bestResult, timeMeasure }
         throw response.error;
     }
 
+    // passenden Eintrag filtern
     const sorted = response.data.filter(row =>
         timeMeasure ? row.leistung >= bestResult : row.leistung <= bestResult
     );
@@ -45,6 +51,7 @@ async function fetchPointData({ geschlecht, sportCode, bestResult, timeMeasure }
     return sorted.length > 0 ? [sorted[0]] : [];
 }
 
+// Ergebnisse speichern
 export async function POST(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
     console.log("🔐 Zugriff durch:", user);
@@ -53,6 +60,7 @@ export async function POST(req) {
     const { students, sport, group, skippedStudents, attemptHeights, results, scores, sportConfig } = body;
 
     try {
+        // Schülerinfos abrufen
         const { data: studentInfos, error: studentFetchError } = await supabase
             .from("students")
             .select("id, geschlecht, age_category, klasse")
@@ -71,6 +79,7 @@ export async function POST(req) {
             const bestResult = getBestResult(scores[student.id], attemptHeights[student.id], results[student.id], sportConfig);
             console.log(`👟 [${student.id}] Bestleistung:`, bestResult);
 
+            // Punkte bestimmen (oder null)
             let pointData = bestResult === 0
                 ? [{ punkte: null }]
                 : await fetchPointData({
@@ -81,8 +90,8 @@ export async function POST(req) {
                 });
 
             const punkte = pointData.length > 0 ? pointData[0].punkte : 0;
-            console.log(`🎯 [${student.id}] Punkte:`, punkte);
 
+            // Note berechnen
             let note = null;
             if (!isSkipped && punkte !== null) {
                 const { data: gradeData, error: gradeError } = await supabase
@@ -99,6 +108,7 @@ export async function POST(req) {
                 console.log(`📝 [${student.id}] Note:`, note);
             }
 
+            // Eintrag vorbereiten
             const update = {
                 student_id: student.id,
                 sport,
@@ -114,6 +124,7 @@ export async function POST(req) {
 
             console.log("💾 Speichere Resultat für", student.id, update);
 
+            // Prüfen ob Resultat existiert
             const { data: existingData, error: fetchError } = await supabase
                 .from("results")
                 .select("id")
@@ -123,6 +134,7 @@ export async function POST(req) {
 
             if (fetchError) throw fetchError;
 
+            // Update oder Insert
             const { error: upsertError } = existingData
                 ? await supabase.from("results").update(update).eq("id", existingData.id)
                 : await supabase.from("results").insert(update);

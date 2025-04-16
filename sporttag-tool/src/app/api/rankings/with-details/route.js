@@ -1,4 +1,3 @@
-// /app/api/rankings/with-details/route.js
 import { supabase } from "../../../lib/supabaseClient";
 import {requireAnyRole} from "@/app/lib/auth";
 
@@ -6,6 +5,7 @@ export async function GET(req) {
     const user = requireAnyRole(req, ["teacher"]);
 
     try {
+        // Schülerdaten abrufen
         const { data: students, error: studentError } = await supabase
             .from("students")
             .select("id, vorname, nachname, klasse, geburtsdatum, geschlecht, age_category, grade, anwesend, total_points, helfer")
@@ -14,7 +14,7 @@ export async function GET(req) {
             throw new Error("Fehler beim Laden der Schüler: " + studentError.message);
         }
 
-        // Alle Resultate laden
+        // Resultate abrufen (z.B. für Punkte & Detailanzeige)
         const { data: results, error: resultsError } = await supabase
             .from("results")
             .select("student_id, sport, best_result, skipped, points, grade");
@@ -23,7 +23,7 @@ export async function GET(req) {
             throw new Error("Fehler beim Laden der Resultate: " + resultsError.message);
         }
 
-        // Alle Sportarten laden
+        // Sportarten (für Namen & Einheiten im Export)
         const { data: sports, error: sportsError } = await supabase
             .from("sports")
             .select("code, name, mesure_unit_short");
@@ -31,19 +31,15 @@ export async function GET(req) {
         if (sportsError) {
             throw new Error("Fehler beim Laden der Sportarten: " + sportsError.message);
         }
-        console.log("Alterkategorien Rohdaten:", students.map(s => ({
-            id: s.id,
-            age_category: s.age_category
-        })));
 
-        // Punkte pro Schüler berechnen und speichern (optional, falls noch nicht geschehen)
+        // Punkte pro Schüler berechnen (nur wenn skipped = false)
         const punkteMap = new Map();
         for (const r of results) {
             if (!r.student_id || r.points == null || r.skipped === true) continue;
             punkteMap.set(r.student_id, (punkteMap.get(r.student_id) || 0) + r.points);
         }
 
-        // Punkte in students-Tabelle speichern
+        // Punkte in DB zurückschreiben (optional, falls noch nicht gespeichert)
         for (const [studentId, punkte] of punkteMap.entries()) {
             await supabase
                 .from("students")
@@ -51,7 +47,7 @@ export async function GET(req) {
                 .eq("id", studentId);
         }
 
-        // Rankings vorbereiten
+        // Daten in ein einheitliches Format bringen
         const daten = students.map((s) => ({
             id: s.id,
             vorname: s.vorname,
@@ -66,18 +62,18 @@ export async function GET(req) {
             anwesend: s.anwesend
         }));
 
+        // Rankings nach Alterskategorie & Klasse gruppieren
         const gruppierteRanglisten = {};
 
         for (const eintrag of daten) {
-            // For preset1 (age category grouping)
-            // Using "__" as a separator to avoid conflicts with hyphens in age categories
+            // Preset1 → Gruppierung nach Alterskategorie + Geschlecht
             const keyCategory = `category__${eintrag.kategorie}__${eintrag.geschlecht}`;
             if (!gruppierteRanglisten[keyCategory]) {
                 gruppierteRanglisten[keyCategory] = [];
             }
             gruppierteRanglisten[keyCategory].push(eintrag);
 
-            // For preset2 (class grouping)
+            // Preset2 → Gruppierung nach Klasse + Geschlecht
             const keyClass = `class__${eintrag.klasse}__${eintrag.geschlecht}`;
             if (!gruppierteRanglisten[keyClass]) {
                 gruppierteRanglisten[keyClass] = [];
@@ -85,11 +81,12 @@ export async function GET(req) {
             gruppierteRanglisten[keyClass].push(eintrag);
         }
 
-        // Sort all rankings
+        // Innerhalb jeder Gruppe nach Punkten sortieren (absteigend)
         for (const key in gruppierteRanglisten) {
             gruppierteRanglisten[key].sort((a, b) => b.total_points - a.total_points);
         }
 
+        // Response: Rankings + alle benötigten Zusatzdaten
         return new Response(JSON.stringify({
             rankings: gruppierteRanglisten,
             results,

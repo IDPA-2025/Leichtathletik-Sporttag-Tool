@@ -1,29 +1,36 @@
 import {requireAnyRole} from "@/app/lib/auth";
 
+// POST-Handler zur Generierung von Ranglisten für Export (CSV, PDF, Excel)
 export async function POST(req) {
 
     try {
+        // Authentifizierung (nur Lehrer erlaubt)
         const user = requireAnyRole(req, ["teacher"]);
+        // Request-Daten: Modus, Vorlage, Filter, Exportoptionen
         const { mode, preset, filters, showDetails, showGrades } = await req.json();
 
+        // Basis-URL ermitteln für internen Fetch
         const cookie = req.headers.get("cookie");
         const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
         const host = req.headers.get("host");
         const baseUrl = `${protocol}://${host}`;
 
+        // Rankings von interner API holen
         const rankingsRes = await fetch(`${baseUrl}/api/rankings/with-details`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Cookie": cookie
+                "Cookie": cookie // Auth weiterleiten
             }
         });
 
         if (!rankingsRes.ok) throw new Error("Fehler beim Laden der Rankings");
 
+        // Rankings und Zusatzdaten extrahieren
         const json = await rankingsRes.json();
         const { rankings, results, sports, students: studentDetails } = json;
 
+        // Hilfsmaps aufbauen für schnellen Zugriff
         const studentMap = {};
         for (const student of studentDetails) {
             studentMap[student.id] = student;
@@ -50,6 +57,7 @@ export async function POST(req) {
         const titles = {};
         let listen = {};
 
+        // 📌 Modus: Preset-Filterung (nach Kategorie oder Klasse)
         if (mode === "preset") {
             console.log("🔑 Rankings-Keys:", Object.keys(rankings));
 
@@ -58,16 +66,14 @@ export async function POST(req) {
             const relevantKeys = Object.keys(rankings).filter(key => key.startsWith(keyPrefix));
 
             for (const key of relevantKeys) {
-                // Now split by "__" instead of "-"
                 const parts = key.split("__");
-                // parts[0] is "category" or "class"
-                // parts[1] is the actual category or class value
-                // parts[2] is the gender
 
-                const type = parts[0];        // "category" or "class"
-                const value = parts[1];       // The category value or class value
-                const geschlecht = parts[2];  // The gender
 
+                const type = parts[0];
+                const value = parts[1];
+                const geschlecht = parts[2];
+
+                // Ranking vorbereiten, Daten anreichern, sortieren und ränge vergeben
                 const list = rankings[key];
                 let rankCounter = 1;
                 listen[key] = list
@@ -82,6 +88,7 @@ export async function POST(req) {
                         anwesend: studentMap[s.id]?.anwesend
                     }))
                     .sort((a, b) => {
+                        // Sortierlogik: Anwesenheit → Helfer → Punkte
                         if (!a.anwesend && b.anwesend) return 1;
                         if (a.anwesend && !b.anwesend) return -1;
                         if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
@@ -99,6 +106,7 @@ export async function POST(req) {
                         return student;
                     });
 
+                // Titel für Rangliste formatieren
                 const formatAgeCategory = (kat) => {
                     switch (kat) {
                         case "-15":
@@ -118,7 +126,10 @@ export async function POST(req) {
                     titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${value}`;
                 }
             }
-        } else {
+        }
+        // 🔧 Modus: Benutzerdefinierte Filter (z. B. ExportPopup)
+        else {
+            // Alle Schüler aus Rankings sammeln (Duplikate entfernen)
             let allStudents = [];
             for (const list of Object.values(rankings)) {
                 allStudents = [...allStudents, ...list];
@@ -131,6 +142,7 @@ export async function POST(req) {
                 return true;
             });
 
+            // Zusatzinfos anreichern
             allStudents = allStudents.map(s => ({
                 ...s,
                 vorname: s.vorname,
@@ -142,6 +154,7 @@ export async function POST(req) {
                 anwesend: studentMap[s.id]?.anwesend
             }));
 
+            // Filter anwenden
             let filteredStudents = allStudents;
             console.log("All students count:", allStudents.length);
             console.log("Sample student data:", allStudents.length > 0 ? allStudents[0] : "No students");
@@ -152,7 +165,6 @@ export async function POST(req) {
                 console.log("After gender filter count:", filteredStudents.length);
             }
 
-// Similar logs for other filters
 
             if (filters.altersgruppe !== "alle") {
                 console.log("Filtering by age category:", filters.altersgruppe);
@@ -164,6 +176,7 @@ export async function POST(req) {
                 filteredStudents = filteredStudents.filter(s => s.klasse === filters.klasse);
             }
 
+            // Sortieren + Ränge
             let rankCounter = 1;
             filteredStudents = filteredStudents.sort((a, b) => {
                 if (!a.anwesend && b.anwesend) return 1;
@@ -186,6 +199,7 @@ export async function POST(req) {
                 "Benutzerdefiniert": filteredStudents
             };
 
+            // Dynamischen Titel generieren
             const geschlechtText = filters.geschlecht === "alle" ? "Alle" :
                 (filters.geschlecht === "maennlich" ? "Männlich" : "Weiblich");
 
@@ -198,6 +212,7 @@ export async function POST(req) {
             titles["Benutzerdefiniert"] = `Rangliste für ${geschlechtText} in ${altersText}, ${klasseText}`;
         }
 
+        // Alle Disziplinen aus resultDetails extrahieren
         const allSports = new Set();
         for (const studentId in resultsMap) {
             for (const sport in resultsMap[studentId]) {
@@ -207,6 +222,7 @@ export async function POST(req) {
 
         const sportHeaders = Array.from(allSports);
 
+        // 📤 JSON-Antwort für Export
         return Response.json({
             ranglisten: listen,
             titles,

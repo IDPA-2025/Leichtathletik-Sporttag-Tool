@@ -12,7 +12,6 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 
-// Utils
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }

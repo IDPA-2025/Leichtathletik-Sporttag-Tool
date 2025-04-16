@@ -1,20 +1,21 @@
-// /api/export/generate-pdf/route.js
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import {requireAnyRole} from "@/app/lib/auth";
 
+// Nur Lehrer dürfen PDF-Export durchführen
 export async function POST(req) {
     const user = requireAnyRole(req, ["teacher"]);
 
 
     try {
+        // Daten aus dem Request extrahieren
         const { exportData, showDetails, showGrades } = await req.json();
         const { ranglisten, titles, sportHeaders, sportUnitMap, sportNameMap } = exportData;
 
         const doc = new jsPDF();
-        let pos = 10;
+        let pos = 10;  // vertikale Startposition
 
-        // Die formatDisziplinZelle Funktion aus dem Frontend
+        // Einzelne Disziplin-Zelle formatieren
         const formatDisziplinZelle = (s, sport, sportUnitMap) => {
             if (s.helfer) return "-";
             const detail = s.resultDetails?.[sport];
@@ -33,12 +34,12 @@ export async function POST(req) {
             return parts.join(" | ");
         };
 
-        // Die generateDisziplinZellen Funktion aus dem Frontend
+        // Alle Disziplin-Zellen für eine Zeile erzeugen
         const generateDisziplinZellen = (s, sportHeaders, sportUnitMap) => {
             return sportHeaders.map(sport => formatDisziplinZelle(s, sport, sportUnitMap));
         };
 
-        // Die generateExportRow Funktion aus dem Frontend
+        // Komplette Zeile für einen Schüler erzeugen
         const generateExportRow = (s, i, sportHeaders, sportUnitMap) => {
             const rankDisplay = s.rang || (s.helfer ? "Helfer" : (i + 1));
             return [
@@ -52,24 +53,28 @@ export async function POST(req) {
             ];
         };
 
-        // Durchlaufe alle Ranglisten
+        // Jede Rangliste in eigenes Tabellen-Layout packen
         Object.keys(ranglisten).forEach((key, idx) => {
             const list = ranglisten[key];
             if (list.length === 0) return;
 
+            // Titel der Tabelle
             doc.setFont("helvetica", "bold");
             doc.text(titles[key] || key, 10, pos);
             doc.setFont("helvetica", "normal");
             pos += 6;
 
+            // Tabellenkopf
             const headers = [
                 "Rang", "Vorname", "Nachname", "Klasse", "Totale Punkte",
                 ...(showGrades ? ["Note"] : []),
                 ...(showDetails ? sportHeaders.map(code => sportNameMap?.[code] || code) : [])
             ];
 
+            // Tabellenkörper
             const body = list.map((s, i) => generateExportRow(s, i, sportHeaders, sportUnitMap));
 
+            // Tabelle mit Styling erstellen
             autoTable(doc, {
                 startY: pos,
                 head: [headers],
@@ -77,14 +82,17 @@ export async function POST(req) {
                 theme: "striped",
                 headStyles: { fillColor: [41, 128, 185], fontSize: 7 },
                 styles: { fontSize: 7, cellPadding: 1 },
+                // Zellen individuell stylen
                 didParseCell: function (data) {
                     const student = list[data.row.index];
 
+                    // Top 3 farbig markieren
                     if (data.section === 'body' && student) {
                         data.cell.styles.textColor = [0, 0, 0];
                         data.cell.styles.fillColor = null;
                         data.cell.styles.fontStyle = 'normal';
 
+                        // Abwesend grau markieren
                         if (student.helfer !== true) {
                             if (data.row.index === 0) data.cell.styles.fillColor = [255, 223, 100];
                             else if (data.row.index === 1) data.cell.styles.fillColor = [220, 220, 220];
@@ -94,6 +102,7 @@ export async function POST(req) {
                             data.cell.styles.fontStyle = 'bold';
                         }
 
+                        // Disziplin übersprungen (hellrot)
                         if (student.rang === "Abwesend") {
                             data.cell.styles.fillColor = [240, 240, 240];
                             data.cell.styles.fontStyle = 'bold';
@@ -117,16 +126,16 @@ export async function POST(req) {
                     }
                 }
             });
+            // Position für nächste Tabelle oder neue Seite
             pos = doc.lastAutoTable.finalY + 10;
 
-            // Seitenumbruch-Logik
             if (idx < Object.keys(ranglisten).length - 1) {
                 doc.addPage();
                 pos = 10;
             }
         });
 
-        // PDF als Blob zurückgeben
+        // PDF als Blob erzeugen und zurückgeben
         const pdfBlob = doc.output('blob');
         return new Response(pdfBlob, {
             headers: {
