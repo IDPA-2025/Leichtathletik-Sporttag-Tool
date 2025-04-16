@@ -16,7 +16,7 @@ useEffect(() => {
   setIsClient(true);
 }, []);
 
-    // Formatiere den Monatsnamen und Jahr für die Anzeige
+    // Monatsname + Jahr formatieren
     const formatMonthYear = (date) => {
         const monthNames = [
             "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -25,6 +25,7 @@ useEffect(() => {
         return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
     };
 
+    // Datum speichern
     const saveDateToDatabase = async (date) => {
         const response = await fetch("/api/sportday/update-date", {
             method: "POST",
@@ -43,7 +44,7 @@ useEffect(() => {
 
 
 
-    // Generiere Kalenderdaten für aktuellen Monat
+    // Kalendertage generieren
     const generateCalendarDays = () => {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
@@ -62,7 +63,7 @@ useEffect(() => {
 
         const days = [];
 
-        // Tage vom vorherigen Monat
+        // Vormonat
         for (let i = 0; i < firstDayOfWeek; i++) {
             days.push({
                 day: prevMonthDays - firstDayOfWeek + i + 1,
@@ -71,7 +72,7 @@ useEffect(() => {
             });
         }
 
-        // Tage vom aktuellen Monat
+        // Aktueller Monat
         for (let i = 1; i <= lastDay.getDate(); i++) {
             days.push({
                 day: i,
@@ -80,8 +81,8 @@ useEffect(() => {
             });
         }
 
-        // Tage vom nächsten Monat (bis zum Ende der Woche)
-        const remainingDays = 42 - days.length; // 6 Wochen * 7 Tage = 42
+        // Folgemonat auffüllen
+        const remainingDays = 42 - days.length;
         for (let i = 1; i <= remainingDays; i++) {
             days.push({
                 day: i,
@@ -152,7 +153,7 @@ useEffect(() => {
         }
     }, []);
 
-    // Schliesse das Popup beim Klick ausserhalb
+    // Klick außerhalb schließt das Modal
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (

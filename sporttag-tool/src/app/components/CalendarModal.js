@@ -3,8 +3,9 @@ import { useEffect } from "react";
 
 export default function CalendarModal({ children, onClose }) {
     useEffect(() => {
+        // ESC schließt das Modal
         const handleEsc = (e) => {
-            if (e.key === "Escape") onClose();
+            if (e.key  === "Escape") onClose();
         };
         document.addEventListener("keydown", handleEsc);
         document.body.style.overflow = "hidden";

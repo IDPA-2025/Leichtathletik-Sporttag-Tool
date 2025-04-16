@@ -12,14 +12,17 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 
+// Tailwind-Klassen zusammenführen
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+// Komplementärfarbe berechnen
 function getComplementaryColor([r, g, b]) {
   return `rgb(${255 - r}, ${255 - g}, ${255 - b})`;
 }
 
+// Tooltip-Liste rendern
 export const AnimatedTooltip = ({ items }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const springConfig = { stiffness: 100, damping: 5 };
@@ -27,6 +30,7 @@ export const AnimatedTooltip = ({ items }) => {
   const rotate = useSpring(useTransform(x, [-100, 100], [-45, 45]), springConfig);
   const translateX = useSpring(useTransform(x, [-100, 100], [-50, 50]), springConfig);
 
+  // Rotation & Bewegungseffekt
   const handleMouseMove = (event) => {
     const halfWidth = event.target.offsetWidth / 2;
     x.set(event.nativeEvent.offsetX - halfWidth);
@@ -41,11 +45,13 @@ export const AnimatedTooltip = ({ items }) => {
   );
 };
 
+// Einzelnes Tooltip-Item
 function TooltipItem({ item, hoveredIndex, setHoveredIndex, handleMouseMove, rotate, translateX }) {
   const [bgColor, setBgColor] = useState("#ffffff");
   const [textColor, setTextColor] = useState("#000000");
   const imgRef = useRef(null);
 
+  // Dominante Farbe aus dem Bild extrahieren
   useEffect(() => {
     const analyze = async () => {
       const img = imgRef.current;
@@ -98,6 +104,7 @@ function TooltipItem({ item, hoveredIndex, setHoveredIndex, handleMouseMove, rot
           onMouseEnter={() => setHoveredIndex(item.id)}
           onMouseLeave={() => setHoveredIndex(null)}
       >
+        {/* Unsichtbares Bild zur Farbanalyse */}
         <img
             ref={imgRef}
             src={item.image}
@@ -138,6 +145,7 @@ function TooltipItem({ item, hoveredIndex, setHoveredIndex, handleMouseMove, rot
           )}
         </AnimatePresence>
 
+        {/* Bild mit Hover-Effekt */}
         <a
             href={item.github}
             target="_blank"
