@@ -8,7 +8,7 @@ export async function GET(req) {
         // Schülerdaten abrufen
         const { data: students, error: studentError } = await supabase
             .from("students")
-            .select("id, vorname, nachname, klasse, geburtsdatum, gender, age_category, grade, anwesend, total_points, helfer")
+            .select("id, name, surname, class_group, date_of_birth, gender, age_category, grade, anwesend, total_points, helfer")
 
         if (studentError) {
             throw new Error("Fehler beim Laden der Schüler: " + studentError.message);
@@ -50,9 +50,9 @@ export async function GET(req) {
         // Daten in ein einheitliches Format bringen
         const daten = students.map((s) => ({
             id: s.id,
-            vorname: s.vorname,
-            nachname: s.nachname,
-            klasse: s.klasse,
+            name: s.name,
+            surname: s.surname,
+            class_group: s.class_group,
             gender: s.gender,
             alter: s.alter,
             kategorie: s.age_category,
@@ -74,7 +74,7 @@ export async function GET(req) {
             gruppierteRanglisten[keyCategory].push(eintrag);
 
             // Preset2 → Gruppierung nach Klasse + Geschlecht
-            const keyClass = `class__${eintrag.klasse}__${eintrag.gender}`;
+            const keyClass = `class__${eintrag.class_group}__${eintrag.gender}`;
             if (!gruppierteRanglisten[keyClass]) {
                 gruppierteRanglisten[keyClass] = [];
             }

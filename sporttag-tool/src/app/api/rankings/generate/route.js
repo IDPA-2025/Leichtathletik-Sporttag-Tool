@@ -23,8 +23,9 @@ export async function POST(req) {
                 "Cookie": cookie // Auth weiterleiten
             }
         });
-
-        if (!rankingsRes.ok) throw new Error("Fehler beim Laden der Rankings");
+        if (!rankingsRes.ok) {
+            throw new Error("Fehler beim Laden der Rankings");
+        }
 
         // Rankings und Zusatzdaten extrahieren
         const json = await rankingsRes.json();
@@ -79,8 +80,8 @@ export async function POST(req) {
                 listen[key] = list
                     .map((s) => ({
                         ...s,
-                        vorname: s.vorname,
-                        nachname: s.nachname,
+                        name: s.name,
+                        surname: s.surname,
                         total_points: studentMap[s.id]?.total_points || 0,
                         grade: studentMap[s.id]?.grade,
                         resultDetails: resultsMap[s.id] || {},
@@ -145,8 +146,8 @@ export async function POST(req) {
             // Zusatzinfos anreichern
             allStudents = allStudents.map(s => ({
                 ...s,
-                vorname: s.vorname,
-                nachname: s.nachname,
+                name: s.name,
+                surname: s.surname,
                 total_points: studentMap[s.id]?.total_points || 0,
                 grade: studentMap[s.id]?.grade,
                 resultDetails: resultsMap[s.id] || {},
@@ -172,8 +173,8 @@ export async function POST(req) {
                 console.log("After age filter count:", filteredStudents.length);
             }
 
-            if (filters.klasse !== "alle") {
-                filteredStudents = filteredStudents.filter(s => s.klasse === filters.klasse);
+            if (filters.class_group !== "alle") {
+                filteredStudents = filteredStudents.filter(s => s.class_group === filters.class_group);
             }
 
             // Sortieren + Ränge
@@ -207,7 +208,7 @@ export async function POST(req) {
                 (filters.altersgruppe === "-15" ? "bis 15 Jahre" :
                     (filters.altersgruppe === "16-17" ? "16 bis 17 Jahre" : "18+ Jahre"));
 
-            const klasseText = filters.klasse === "alle" ? "alle Klassen" : `Klasse ${filters.klasse}`;
+            const klasseText = filters.class_group === "alle" ? "alle Klassen" : `Klasse ${filters.class_group}`;
 
             titles["Benutzerdefiniert"] = `Rangliste für ${genderText} in ${altersText}, ${klasseText}`;
         }

@@ -34,10 +34,10 @@ export default function GroupOverview() {
                 if (!res.ok) throw new Error(json.error);
 
                 const sorted = json.data.sort((a, b) => {
-                    if (a.klasse === b.klasse) {
+                    if (a.class_group === b.class_group) {
                         return a.gender.localeCompare(b.gender);
                     }
-                    return a.klasse.localeCompare(b.klasse, undefined, { numeric: true });
+                    return a.class_group.localeCompare(b.class_group, undefined, { numeric: true });
                 });
 
                 setGroups(sorted);
@@ -109,7 +109,7 @@ export default function GroupOverview() {
                     <div className="w-full max-w-6xl">
                         <div
                             className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
-                            {groups.map(({id, klasse, gender}) => (
+                            {groups.map(({id, class_group, gender}) => (
                                 <div
                                     key={id}
                                     onClick={() => toggleGroup(id)}
@@ -118,7 +118,7 @@ export default function GroupOverview() {
                                     } rounded-lg transition flex flex-col items-center justify-center p-2 sm:p-3 md:p-4`}
                                 >
                                     <p className="text-gray-700 text-base sm:text-lg md:text-xl font-semibold text-center">
-                                        {klasse}
+                                        {class_group}
                                     </p>
                                     <div
                                         className={`absolute bottom-0 right-0 w-0 h-0 

@@ -6,7 +6,7 @@ export async function GET(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
     const { data, error } = await supabase
         .from("students")
-        .select("klasse, gender");
+        .select("class_group, gender");
 
     if (error) {
         return new Response(JSON.stringify({
@@ -18,11 +18,11 @@ export async function GET(req) {
 
     // Gruppen nach Klasse + Geschlecht aufbauen
     data.forEach(student => {
-        const groupKey = `${student.klasse}-${student.gender.toLowerCase()}`;
+        const groupKey = `${student.class_group}-${student.gender.toLowerCase()}`;
         if (!groupMap.has(groupKey)) {
             groupMap.set(groupKey, {
                 id: groupKey,
-                klasse: student.klasse,
+                class_group: student.class_group,
                 gender: student.gender.toLowerCase()
             });
         }

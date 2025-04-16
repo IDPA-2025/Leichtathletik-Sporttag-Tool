@@ -3,9 +3,9 @@ import { supabase } from "../../../lib/supabaseClient";
 import {requireAnyRole} from "@/app/lib/auth";
 
 // Alterskategorie anhand Geburtsdatum und Veranstaltungsdatum berechnen
-function calculateAgeCategory(geburtsdatum, veranstaltungsDatumStr) {
+function calculateAgeCategory(date_of_birth, veranstaltungsDatumStr) {
     const veranstaltungsDatum = new Date(veranstaltungsDatumStr);
-    const geburtsdatumDate = new Date(geburtsdatum);
+    const geburtsdatumDate = new Date(date_of_birth);
     const diffInJahren = veranstaltungsDatum.getFullYear() - geburtsdatumDate.getFullYear();
     const adjust = veranstaltungsDatum < new Date(geburtsdatumDate.setFullYear(veranstaltungsDatum.getFullYear()));
     const alter = adjust ? diffInJahren - 1 : diffInJahren;
@@ -35,7 +35,7 @@ export async function POST(req) {
         // Schüler laden
         const { data: students, error: studentError } = await supabase
             .from("students")
-            .select("id, geburtsdatum");
+            .select("id, date_of_birth");
 
         if (studentError) {
             console.error("Fehler beim Laden der Schülerdaten:", studentError);
@@ -45,7 +45,7 @@ export async function POST(req) {
         // Neue Alterskategorien berechnen
         const updates = students.map((student) => ({
             id: student.id,
-            age_category: calculateAgeCategory(student.geburtsdatum, veranstaltungsDatum),
+            age_category: calculateAgeCategory(student.date_of_birth, veranstaltungsDatum),
         }));
 
         // Alterskategorien speichern

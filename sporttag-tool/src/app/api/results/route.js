@@ -63,7 +63,7 @@ export async function POST(req) {
         // Schülerinfos abrufen
         const { data: studentInfos, error: studentFetchError } = await supabase
             .from("students")
-            .select("id, gender, age_category, klasse")
+            .select("id, gender, age_category, class_group")
             .in("id", students.map(s => s.id));
 
         if (studentFetchError) throw studentFetchError;
@@ -112,7 +112,7 @@ export async function POST(req) {
             const update = {
                 student_id: student.id,
                 sport,
-                group: `${studentInfo.klasse}-${studentInfo.gender}`,
+                group: `${studentInfo.class_group}-${studentInfo.gender}`,
                 heights: sportConfig.checkFails ? attemptHeights[student.id] : null,
                 attempt_results: sportConfig.checkFails ? results[student.id] : null,
                 scores: !sportConfig.checkFails ? scores[student.id] : null,

@@ -20,7 +20,7 @@ export async function POST(req) {
             return new Response(JSON.stringify({ error: error.message }), { status: 500 });
         }
 
-        const newClasses = [...new Set(students.map(s => s.klasse))];
+        const newClasses = [...new Set(students.map(s => s.class_group))];
         return new Response(JSON.stringify({ success: true, newClasses }), { status: 200 });
 
     } catch (error) {

@@ -44,9 +44,9 @@ export async function POST(req) {
             const rankDisplay = s.rang || (s.helfer ? "Helfer" : (i + 1));
             return [
                 rankDisplay,
-                s.vorname,
-                s.nachname,
-                s.klasse,
+                s.name,
+                s.surname,
+                s.class_group,
                 s.total_points,
                 ...(showGrades ? [s.grade ?? "-"] : []),
                 ...(showDetails ? generateDisziplinZellen(s, sportHeaders, sportUnitMap) : [])

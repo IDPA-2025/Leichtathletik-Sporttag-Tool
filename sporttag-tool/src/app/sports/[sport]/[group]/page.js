@@ -331,13 +331,13 @@ export default function GroupResults() {
         const result = students.filter(student => {
             const present = student.anwesend === true;
             const notHelper = !student.helfer;
-            const matches = !searchQuery || `${student.vorname} ${student.nachname}`.toLowerCase().includes(searchQuery.toLowerCase());
+            const matches = !searchQuery || `${student.name} ${student.surname}`.toLowerCase().includes(searchQuery.toLowerCase());
             return present && notHelper && matches;
         });
 
         result.sort((a, b) => {
-            const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
-            const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+            const nameA = `${a.surname} ${a.name}`.toLowerCase();
+            const nameB = `${b.surname} ${b.name}`.toLowerCase();
             return nameA.localeCompare(nameB);
         });
 
@@ -515,7 +515,7 @@ export default function GroupResults() {
                                     <span>Nicht teilgenommen</span>
                                 </label>
                                 <p className="text-lg font-semibold text-gray-900">
-                                    {student.vorname} {student.nachname}
+                                    {student.name} {student.surname}
                                 </p>
                             </div>
 
