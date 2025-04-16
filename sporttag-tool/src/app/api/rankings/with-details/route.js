@@ -8,7 +8,7 @@ export async function GET(req) {
         // Schülerdaten abrufen
         const { data: students, error: studentError } = await supabase
             .from("students")
-            .select("id, vorname, nachname, klasse, geburtsdatum, geschlecht, age_category, grade, anwesend, total_points, helfer")
+            .select("id, vorname, nachname, klasse, geburtsdatum, gender, age_category, grade, anwesend, total_points, helfer")
 
         if (studentError) {
             throw new Error("Fehler beim Laden der Schüler: " + studentError.message);
@@ -53,7 +53,7 @@ export async function GET(req) {
             vorname: s.vorname,
             nachname: s.nachname,
             klasse: s.klasse,
-            geschlecht: s.geschlecht,
+            gender: s.gender,
             alter: s.alter,
             kategorie: s.age_category,
             total_points: s.total_points || 0,
@@ -67,14 +67,14 @@ export async function GET(req) {
 
         for (const eintrag of daten) {
             // Preset1 → Gruppierung nach Alterskategorie + Geschlecht
-            const keyCategory = `category__${eintrag.kategorie}__${eintrag.geschlecht}`;
+            const keyCategory = `category__${eintrag.kategorie}__${eintrag.gender}`;
             if (!gruppierteRanglisten[keyCategory]) {
                 gruppierteRanglisten[keyCategory] = [];
             }
             gruppierteRanglisten[keyCategory].push(eintrag);
 
             // Preset2 → Gruppierung nach Klasse + Geschlecht
-            const keyClass = `class__${eintrag.klasse}__${eintrag.geschlecht}`;
+            const keyClass = `class__${eintrag.klasse}__${eintrag.gender}`;
             if (!gruppierteRanglisten[keyClass]) {
                 gruppierteRanglisten[keyClass] = [];
             }

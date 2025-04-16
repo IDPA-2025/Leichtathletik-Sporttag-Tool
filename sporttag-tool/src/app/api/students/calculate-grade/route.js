@@ -8,7 +8,7 @@ export async function POST(req) {
     try {
         // Schüler, Notenskala, Resultate laden
         const [{ data: students, error: studentError }, { data: grades, error: gradesError }, { data: results, error: resultsError }] = await Promise.all([
-            supabase.from("students").select("id, age_category, geschlecht"),
+            supabase.from("students").select("id, age_category, gender"),
             supabase.from("grades_table").select("points_min, grade, gender, age_category"),
             supabase.from("results").select("student_id, points, grade, skipped")
         ]);

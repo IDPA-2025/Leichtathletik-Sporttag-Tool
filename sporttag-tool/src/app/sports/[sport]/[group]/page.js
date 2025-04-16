@@ -141,21 +141,21 @@ export default function GroupResults() {
 
     // Fetch point scale data for both genders
     const fetchScale = async () => {
-        const geschlechter = ["maennlich", "weiblich"]; // Always fetch both
+        const genderer = ["maennlich", "weiblich"]; // Always fetch both
         const allData = [];
 
-        for (const geschlecht of geschlechter) {
-            const res = await fetch(`/api/points?sport=${sport}&geschlecht=${geschlecht}`, {credentials: "include",});
+        for (const gender of genderer) {
+            const res = await fetch(`/api/points?sport=${sport}&gender=${gender}`, {credentials: "include",});
             const json = await res.json();
 
             if (res.ok && json.data?.length > 0) {
-                allData.push({ geschlecht, data: json.data });
+                allData.push({ gender, data: json.data });
             } else {
-                console.error("Fehler beim Laden der Punkteskala für", geschlecht, ":", json.error);
+                console.error("Fehler beim Laden der Punkteskala für", gender, ":", json.error);
             }
         }
 
-        setPointsData(allData); // [{ geschlecht: ..., data: [...] }, ...]
+        setPointsData(allData); // [{ gender: ..., data: [...] }, ...]
     };
 
     // Fetch existing results for students
@@ -592,11 +592,11 @@ export default function GroupResults() {
 
                         {/* Desktop Grid View */}
                         <div className="hidden md:grid grid-cols-2 gap-6">
-                            {pointsData.map(({ geschlecht, data }) => (
-                                <div key={geschlecht} className="rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md duration-200">
+                            {pointsData.map(({ gender, data }) => (
+                                <div key={gender} className="rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md duration-200">
                                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 py-3 px-4 border-b border-gray-200">
                                         <h3 className="text-md font-semibold text-gray-800 text-center">
-                                            {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
+                                            {gender === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
                                         </h3>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -624,9 +624,9 @@ export default function GroupResults() {
 
                         {/* Mobile Accordion View - Now Scrollable */}
                         <div className="block md:hidden space-y-4 text-gray-800">
-                            {pointsData.map(({ geschlecht, data }, index) => (
+                            {pointsData.map(({ gender, data }, index) => (
                                 <div
-                                    key={geschlecht}
+                                    key={gender}
                                     className="border border-gray-200 rounded-lg overflow-hidden shadow-sm transition-all"
                                 >
                                     <button
@@ -635,9 +635,9 @@ export default function GroupResults() {
                                     >
                     <span className="flex items-center gap-2">
                       <span className="text-blue-600">
-                        {geschlecht === "maennlich" ? "♂" : "♀"}
+                        {gender === "maennlich" ? "♂" : "♀"}
                       </span>
-                      <span>{geschlecht === "maennlich" ? "Männlich" : "Weiblich"}</span>
+                      <span>{gender === "maennlich" ? "Männlich" : "Weiblich"}</span>
                     </span>
                                         <svg
                                             className={`w-5 h-5 text-blue-600 transform transition-transform duration-300 ${

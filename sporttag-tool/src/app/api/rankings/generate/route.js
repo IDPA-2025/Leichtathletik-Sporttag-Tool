@@ -71,7 +71,7 @@ export async function POST(req) {
 
                 const type = parts[0];
                 const value = parts[1];
-                const geschlecht = parts[2];
+                const gender = parts[2];
 
                 // Ranking vorbereiten, Daten anreichern, sortieren und ränge vergeben
                 const list = rankings[key];
@@ -121,9 +121,9 @@ export async function POST(req) {
                 };
 
                 if (type === "category") {
-                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${formatAgeCategory(value)}`;
+                    titles[key] = `Rangliste für ${gender === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${formatAgeCategory(value)}`;
                 } else if (type === "class") {
-                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${value}`;
+                    titles[key] = `Rangliste für ${gender === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${value}`;
                 }
             }
         }
@@ -159,9 +159,9 @@ export async function POST(req) {
             console.log("All students count:", allStudents.length);
             console.log("Sample student data:", allStudents.length > 0 ? allStudents[0] : "No students");
 
-            if (filters.geschlecht !== "alle") {
-                console.log("Filtering by gender:", filters.geschlecht);
-                filteredStudents = filteredStudents.filter(s => s.geschlecht === filters.geschlecht);
+            if (filters.gender !== "alle") {
+                console.log("Filtering by gender:", filters.gender);
+                filteredStudents = filteredStudents.filter(s => s.gender === filters.gender);
                 console.log("After gender filter count:", filteredStudents.length);
             }
 
@@ -200,8 +200,8 @@ export async function POST(req) {
             };
 
             // Dynamischen Titel generieren
-            const geschlechtText = filters.geschlecht === "alle" ? "Alle" :
-                (filters.geschlecht === "maennlich" ? "Männlich" : "Weiblich");
+            const genderText = filters.gender === "alle" ? "Alle" :
+                (filters.gender === "maennlich" ? "Männlich" : "Weiblich");
 
             const altersText = filters.altersgruppe === "alle" ? "alle Altersgruppen" :
                 (filters.altersgruppe === "-15" ? "bis 15 Jahre" :
@@ -209,7 +209,7 @@ export async function POST(req) {
 
             const klasseText = filters.klasse === "alle" ? "alle Klassen" : `Klasse ${filters.klasse}`;
 
-            titles["Benutzerdefiniert"] = `Rangliste für ${geschlechtText} in ${altersText}, ${klasseText}`;
+            titles["Benutzerdefiniert"] = `Rangliste für ${genderText} in ${altersText}, ${klasseText}`;
         }
 
         // Alle Disziplinen aus resultDetails extrahieren

@@ -5,13 +5,13 @@ import {requireAnyRole} from "@/app/lib/auth";
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const sport = searchParams.get("sport");
-    const geschlecht = searchParams.get("geschlecht");
+    const gender = searchParams.get("gender");
     // Nur Lehrer oder Assistenten dürfen zugreifen
     const user = requireAnyRole(req, ["teacher", "assistant"]);
 
     // Fehlende Parameter → Bad Request
-    if (!sport || !geschlecht) {
-        return new Response(JSON.stringify({ error: "sport und geschlecht sind erforderlich." }), { status: 400 });
+    if (!sport || !gender) {
+        return new Response(JSON.stringify({ error: "sport und gender sind erforderlich." }), { status: 400 });
     }
 
     // Punktetabelle aus Supabase abfragen
@@ -19,7 +19,7 @@ export async function GET(req) {
         .from("points_table")
         .select("leistung, punkte")
         .eq("sport_code", sport)
-        .eq("geschlecht", geschlecht)
+        .eq("gender", gender)
         .order("leistung", { ascending: false });
 
     // Fehler bei der Abfrage → Internal Server Error

@@ -27,13 +27,13 @@ function getBestResult(scoresRaw, heightsRaw, resultsRaw, config) {
 }
 
 // Punktwert aus Punktetabelle abrufen
-async function fetchPointData({ geschlecht, sportCode, bestResult, timeMeasure }) {
-    console.log(`[fetchPointData] Suche Punktzahl für ${geschlecht}, ${sportCode}, Ergebnis: ${bestResult}`);
+async function fetchPointData({ gender, sportCode, bestResult, timeMeasure }) {
+    console.log(`[fetchPointData] Suche Punktzahl für ${gender}, ${sportCode}, Ergebnis: ${bestResult}`);
 
     const response = await supabase
         .from("points_table")
         .select("leistung, punkte")
-        .eq("geschlecht", geschlecht)
+        .eq("gender", gender)
         .eq("sport_code", sportCode)
         .order("leistung", { ascending: timeMeasure });
 
@@ -63,7 +63,7 @@ export async function POST(req) {
         // Schülerinfos abrufen
         const { data: studentInfos, error: studentFetchError } = await supabase
             .from("students")
-            .select("id, geschlecht, age_category, klasse")
+            .select("id, gender, age_category, klasse")
             .in("id", students.map(s => s.id));
 
         if (studentFetchError) throw studentFetchError;
@@ -83,7 +83,7 @@ export async function POST(req) {
             let pointData = bestResult === 0
                 ? [{ punkte: null }]
                 : await fetchPointData({
-                    geschlecht: studentInfo.geschlecht,
+                    gender: studentInfo.gender,
                     sportCode: sport,
                     bestResult,
                     timeMeasure: sportConfig.time_measure
@@ -97,7 +97,7 @@ export async function POST(req) {
                 const { data: gradeData, error: gradeError } = await supabase
                     .from("grades_table")
                     .select("grade")
-                    .eq("gender", studentInfo.geschlecht)
+                    .eq("gender", studentInfo.gender)
                     .eq("age_category", studentInfo.age_category)
                     .lte("average_points_per_category", punkte)
                     .order("average_points_per_category", { ascending: false })
@@ -112,7 +112,7 @@ export async function POST(req) {
             const update = {
                 student_id: student.id,
                 sport,
-                group: `${studentInfo.klasse}-${studentInfo.geschlecht}`,
+                group: `${studentInfo.klasse}-${studentInfo.gender}`,
                 heights: sportConfig.checkFails ? attemptHeights[student.id] : null,
                 attempt_results: sportConfig.checkFails ? results[student.id] : null,
                 scores: !sportConfig.checkFails ? scores[student.id] : null,

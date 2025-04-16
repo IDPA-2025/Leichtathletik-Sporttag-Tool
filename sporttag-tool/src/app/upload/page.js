@@ -122,7 +122,7 @@ export default function UploadPage() {
           nachname: values[nachnameIndex] || "",
           vorname: values[vornameIndex] || "",
           geburtsdatum,
-          geschlecht: values[anredeIndex] === "Herr" ? "maennlich" : "weiblich",
+          gender: values[anredeIndex] === "Herr" ? "maennlich" : "weiblich",
           klasse: values[klasseIndex] || "",
           helfer: false,
           anwesend: true,
@@ -385,7 +385,7 @@ export default function UploadPage() {
                 {students.map((student, index) => (
                     <tr key={index} className="border-b border-gray-200 text-black">
                       <td className="p-2">{`${student.nachname}, ${student.vorname}`}</td>
-                      <td className="p-2">{student.geschlecht}</td>
+                      <td className="p-2">{student.gender}</td>
                       <td className="p-2">{student.klasse}</td>
                       <td className="p-2">
                         <button className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`} onClick={() => toggleHelper(index)} disabled={absentees.includes(index)}>
@@ -399,12 +399,11 @@ export default function UploadPage() {
                 ))}
                 </tbody>
               </table>
-
               <div className="md:hidden flex flex-col gap-4">
                 {students.map((student, index) => (
                     <div key={index} className="border border-gray-300 rounded-lg p-3 shadow-sm">
                       <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>{student.vorname} {student.nachname}</p>
-                      <p className="text-gray-600">Klasse: {student.klasse} | Geschlecht: {student.geschlecht}</p>
+                      <p className="text-gray-600">Klasse: {student.klasse} | Geschlecht: {student.gender}</p>
                       <div className="flex justify-between mt-2 items-center">
                         <button className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`} onClick={() => toggleHelper(index)} disabled={absentees.includes(index)}>
                           Helfer
@@ -467,7 +466,7 @@ export default function UploadPage() {
           {student.vorname} {student.nachname}
         </p>
         <p className="text-gray-600 text-sm">
-          {student.klasse} | {student.geschlecht}
+          {student.klasse} | {student.gender}
         </p>
       </div>
 

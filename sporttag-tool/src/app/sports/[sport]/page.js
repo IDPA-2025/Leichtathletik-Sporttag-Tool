@@ -35,7 +35,7 @@ export default function GroupOverview() {
 
                 const sorted = json.data.sort((a, b) => {
                     if (a.klasse === b.klasse) {
-                        return a.geschlecht.localeCompare(b.geschlecht);
+                        return a.gender.localeCompare(b.gender);
                     }
                     return a.klasse.localeCompare(b.klasse, undefined, { numeric: true });
                 });
@@ -109,7 +109,7 @@ export default function GroupOverview() {
                     <div className="w-full max-w-6xl">
                         <div
                             className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
-                            {groups.map(({id, klasse, geschlecht}) => (
+                            {groups.map(({id, klasse, gender}) => (
                                 <div
                                     key={id}
                                     onClick={() => toggleGroup(id)}
@@ -126,7 +126,7 @@ export default function GroupOverview() {
                         sm:border-b-[25px] sm:border-l-[25px] 
                         md:border-b-[30px] md:border-l-[30px]
                         border-transparent rounded-br-md ${
-                                            geschlecht === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'
+                                            gender === 'weiblich' ? 'border-b-pink-500' : 'border-b-blue-500'
                                         }`}
                                     ></div>
                                 </div>
