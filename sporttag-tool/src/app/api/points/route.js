@@ -17,7 +17,7 @@ export async function GET(req) {
     // Punktetabelle aus Supabase abfragen
     const { data, error } = await supabase
         .from("points_table")
-        .select("performance, punkte")
+        .select("performance, points")
         .eq("sport_code", sport)
         .eq("gender", gender)
         .order("performance", { ascending: false });

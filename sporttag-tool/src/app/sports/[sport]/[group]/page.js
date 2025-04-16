@@ -141,21 +141,25 @@ export default function GroupResults() {
 
     // Fetch point scale data for both genders
     const fetchScale = async () => {
-        const genderer = ["maennlich", "weiblich"]; // Always fetch both
+        const genderList = ["maennlich", "weiblich"];
         const allData = [];
 
-        for (const gender of genderer) {
-            const res = await fetch(`/api/points?sport=${sport}&gender=${gender}`, {credentials: "include",});
+        for (const genderValue of genderList) {
+            const res = await fetch(`/api/points?sport=${sport}&gender=${genderValue}`, {
+                credentials: "include",
+            });
+
             const json = await res.json();
 
             if (res.ok && json.data?.length > 0) {
-                allData.push({ gender, data: json.data });
+                allData.push({ gender: genderValue, data: json.data });
             } else {
-                console.error("Fehler beim Laden der Punkteskala für", gender, ":", json.error);
+                console.error("Fehler beim Laden der Punkteskala für", genderValue, ":", json.error);
             }
         }
 
-        setPointsData(allData); // [{ gender: ..., data: [...] }, ...]
+        setPointsData(allData);
+
     };
 
     // Fetch existing results for students
