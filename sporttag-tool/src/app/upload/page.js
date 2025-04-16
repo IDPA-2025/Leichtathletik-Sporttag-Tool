@@ -104,11 +104,11 @@ export default function UploadPage() {
       if (lines.length < 2) return;
 
       const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
-      const nachnameIndex = headers.indexOf("nachname");
-      const vornameIndex = headers.indexOf("vorname");
+      const nachnameIndex = headers.indexOf("surname");
+      const vornameIndex = headers.indexOf("name");
       const geburtsdatumIndex = headers.indexOf("geburtstag");
       const anredeIndex = headers.indexOf("anrede");
-      const klasseIndex = headers.indexOf("klasse");
+      const klasseIndex = headers.indexOf("class_group");
 
       if ([nachnameIndex, vornameIndex, geburtsdatumIndex, anredeIndex, klasseIndex].includes(-1)) {
         alert("Die CSV-Datei enthält nicht alle erforderlichen Spalten!");
@@ -117,19 +117,19 @@ export default function UploadPage() {
 
       const parsedStudents = lines.slice(1).map((line) => {
         const values = line.split(separator).map(v => v.trim());
-        const geburtsdatum = convertDate(values[geburtsdatumIndex]);
+        const date_of_birth = convertDate(values[geburtsdatumIndex]);
         return {
-          nachname: values[nachnameIndex] || "",
-          vorname: values[vornameIndex] || "",
-          geburtsdatum,
-          geschlecht: values[anredeIndex] === "Herr" ? "maennlich" : "weiblich",
-          klasse: values[klasseIndex] || "",
-          helfer: false,
-          anwesend: true,
+          surname: values[nachnameIndex] || "",
+          name: values[vornameIndex] || "",
+          date_of_birth,
+          gender: values[anredeIndex] === "Herr" ? "maennlich" : "weiblich",
+          class_group: values[klasseIndex] || "",
+          assistant_bool: false,
+          present_bool: true,
         };
-      }).filter(student => student.nachname && student.vorname && student.klasse);
+      }).filter(student => student.surname && student.name && student.class_group);
 
-      const uploadedClasses = [...new Set(parsedStudents.map(s => s.klasse))];
+      const uploadedClasses = [...new Set(parsedStudents.map(s => s.class_group))];
       const existing = uploadedClasses.filter(cls => classes.includes(cls));
 
       if (existing.length > 0) {
@@ -162,8 +162,8 @@ export default function UploadPage() {
   
     const updatedStudents = students.map((student, index) => ({
       ...student,
-      helfer: helpers.includes(index),
-      anwesend: !absentees.includes(index),
+      assistant_bool: helpers.includes(index),
+      present_bool: !absentees.includes(index),
     }));
   
     try {
@@ -217,7 +217,7 @@ export default function UploadPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ klasse: cls }),
+        body: JSON.stringify({ class_group: cls }),
       });
 
       const result = await response.json();
@@ -238,7 +238,7 @@ export default function UploadPage() {
 
   const handleEditClass = async (cls) => {
     try {
-      const response = await fetch(`/api/students/by-class?klasse=${cls}`, {credentials: "include",});
+      const response = await fetch(`/api/students/by-class?class_group=${cls}`, {credentials: "include",});
       const json = await response.json();
 
       if (!response.ok || !json.data) {
@@ -253,8 +253,8 @@ export default function UploadPage() {
       }
 
       setStudents(data);
-      setHelpers(data.map((s, i) => s.helfer ? i : null).filter(i => i !== null));
-      setAbsentees(data.map((s, i) => !s.anwesend ? i : null).filter(i => i !== null));
+      setHelpers(data.map((s, i) => s.assistant_bool ? i : null).filter(i => i !== null));
+      setAbsentees(data.map((s, i) => !s.present_bool ? i : null).filter(i => i !== null));
     } catch (error) {
       console.error("Fehler beim Laden der Klasse:", error);
       alert(`Fehler beim Laden: ${error.message}`);
@@ -384,9 +384,9 @@ export default function UploadPage() {
                 <tbody>
                 {students.map((student, index) => (
                     <tr key={index} className="border-b border-gray-200 text-black">
-                      <td className="p-2">{`${student.nachname}, ${student.vorname}`}</td>
-                      <td className="p-2">{student.geschlecht}</td>
-                      <td className="p-2">{student.klasse}</td>
+                      <td className="p-2">{`${student.surname}, ${student.name}`}</td>
+                      <td className="p-2">{student.gender}</td>
+                      <td className="p-2">{student.class_group}</td>
                       <td className="p-2">
                         <button className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`} onClick={() => toggleHelper(index)} disabled={absentees.includes(index)}>
                           Helfer
@@ -399,12 +399,11 @@ export default function UploadPage() {
                 ))}
                 </tbody>
               </table>
-
               <div className="md:hidden flex flex-col gap-4">
                 {students.map((student, index) => (
                     <div key={index} className="border border-gray-300 rounded-lg p-3 shadow-sm">
-                      <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>{student.vorname} {student.nachname}</p>
-                      <p className="text-gray-600">Klasse: {student.klasse} | Geschlecht: {student.geschlecht}</p>
+                      <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>{student.name} {student.surname}</p>
+                      <p className="text-gray-600">Klasse: {student.class_group} | Geschlecht: {student.gender}</p>
                       <div className="flex justify-between mt-2 items-center">
                         <button className={`helper-button ${helpers.includes(index) ? "active" : "inactive"} ${absentees.includes(index) ? "absent" : ""}`} onClick={() => toggleHelper(index)} disabled={absentees.includes(index)}>
                           Helfer
@@ -464,10 +463,10 @@ export default function UploadPage() {
     >
       <div>
         <p className={`text-lg font-medium ${absentees.includes(index) ? "text-gray-400 line-through" : "text-black"}`}>
-          {student.vorname} {student.nachname}
+          {student.name} {student.surname}
         </p>
         <p className="text-gray-600 text-sm">
-          {student.klasse} | {student.geschlecht}
+          {student.class_group} | {student.gender}
         </p>
       </div>
 

@@ -9,7 +9,7 @@ export default function ExportPopup({ onClose }) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [message, setMessage] = useState("");
     // Filterzustände für benutzerdefinierten Export
-    const [filters, setFilters] = useState({ geschlecht: "alle", altersgruppe: "alle", klasse: "alle" });
+    const [filters, setFilters] = useState({ gender: "alle", altersgruppe: "alle", class_group: "alle" });
     // Optional: Ranglisten speichern (derzeit nicht verwendet)
     const [ranglisten, setRanglisten] = useState({});
     // Exportkonfiguration
@@ -59,10 +59,10 @@ export default function ExportPopup({ onClose }) {
                 ? "Rangliste_Altersgruppe_Geschlecht"
                 : "Rangliste_Klasse_Geschlecht";
         } else {
-            const geschlecht = filters.geschlecht === "alle" ? "Alle" : filters.geschlecht;
+            const gender = filters.gender === "alle" ? "Alle" : filters.gender;
             const altersgruppe = filters.altersgruppe === "alle" ? "Alle" : filters.altersgruppe;
-            const klasse = filters.klasse === "alle" ? "Alle" : filters.klasse;
-            return `Rangliste_${geschlecht}_${altersgruppe}_${klasse}`;
+            const class_group = filters.class_group === "alle" ? "Alle" : filters.class_group;
+            return `Rangliste_${gender}_${altersgruppe}_${class_group}`;
         }
     };
 
@@ -259,8 +259,8 @@ export default function ExportPopup({ onClose }) {
                             <div className="flex flex-col gap-2 mb-4 text-gray-900">
                                 <label className="text-sm">Geschlecht</label>
                                 <select
-                                    value={filters.geschlecht}
-                                    onChange={e => setFilters(prev => ({...prev, geschlecht: e.target.value}))}
+                                    value={filters.gender}
+                                    onChange={e => setFilters(prev => ({...prev, gender: e.target.value}))}
                                     className="w-full p-2 border rounded"
                                 >
                                     <option value="alle">Alle</option>
@@ -282,8 +282,8 @@ export default function ExportPopup({ onClose }) {
 
                                 <label className="text-sm">Klasse</label>
                                 <select
-                                    value={filters.klasse}
-                                    onChange={e => setFilters(prev => ({...prev, klasse: e.target.value}))}
+                                    value={filters.class_group}
+                                    onChange={e => setFilters(prev => ({...prev, class_group: e.target.value}))}
                                     className="w-full p-2 border rounded"
                                 >
                                     <option value="alle">Alle Klassen</option>

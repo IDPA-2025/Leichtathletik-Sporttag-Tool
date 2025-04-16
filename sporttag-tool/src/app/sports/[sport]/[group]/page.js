@@ -141,21 +141,21 @@ export default function GroupResults() {
 
     // Fetch point scale data for both genders
     const fetchScale = async () => {
-        const geschlechter = ["maennlich", "weiblich"]; // Always fetch both
+        const genderer = ["maennlich", "weiblich"]; // Always fetch both
         const allData = [];
 
-        for (const geschlecht of geschlechter) {
-            const res = await fetch(`/api/points?sport=${sport}&geschlecht=${geschlecht}`, {credentials: "include",});
+        for (const gender of genderer) {
+            const res = await fetch(`/api/points?sport=${sport}&gender=${gender}`, {credentials: "include",});
             const json = await res.json();
 
             if (res.ok && json.data?.length > 0) {
-                allData.push({ geschlecht, data: json.data });
+                allData.push({ gender, data: json.data });
             } else {
-                console.error("Fehler beim Laden der Punkteskala für", geschlecht, ":", json.error);
+                console.error("Fehler beim Laden der Punkteskala für", gender, ":", json.error);
             }
         }
 
-        setPointsData(allData); // [{ geschlecht: ..., data: [...] }, ...]
+        setPointsData(allData); // [{ gender: ..., data: [...] }, ...]
     };
 
     // Fetch existing results for students
@@ -329,15 +329,15 @@ export default function GroupResults() {
     // Filter and sort students when search query changes
     useEffect(() => {
         const result = students.filter(student => {
-            const present = student.anwesend === true;
-            const notHelper = !student.helfer;
-            const matches = !searchQuery || `${student.vorname} ${student.nachname}`.toLowerCase().includes(searchQuery.toLowerCase());
+            const present = student.present_bool === true;
+            const notHelper = !student.assistant_bool;
+            const matches = !searchQuery || `${student.name} ${student.surname}`.toLowerCase().includes(searchQuery.toLowerCase());
             return present && notHelper && matches;
         });
 
         result.sort((a, b) => {
-            const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
-            const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+            const nameA = `${a.surname} ${a.name}`.toLowerCase();
+            const nameB = `${b.surname} ${b.name}`.toLowerCase();
             return nameA.localeCompare(nameB);
         });
 
@@ -515,7 +515,7 @@ export default function GroupResults() {
                                     <span>Nicht teilgenommen</span>
                                 </label>
                                 <p className="text-lg font-semibold text-gray-900">
-                                    {student.vorname} {student.nachname}
+                                    {student.name} {student.surname}
                                 </p>
                             </div>
 
@@ -592,11 +592,11 @@ export default function GroupResults() {
 
                         {/* Desktop Grid View */}
                         <div className="hidden md:grid grid-cols-2 gap-6">
-                            {pointsData.map(({ geschlecht, data }) => (
-                                <div key={geschlecht} className="rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md duration-200">
+                            {pointsData.map(({ gender, data }) => (
+                                <div key={gender} className="rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md duration-200">
                                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 py-3 px-4 border-b border-gray-200">
                                         <h3 className="text-md font-semibold text-gray-800 text-center">
-                                            {geschlecht === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
+                                            {gender === "maennlich" ? "♂ Männlich" : "♀ Weiblich"}
                                         </h3>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -610,8 +610,8 @@ export default function GroupResults() {
                                             <tbody className="bg-white divide-y divide-gray-200">
                                             {data.map((row, i) => (
                                                 <tr key={i} className="hover:bg-blue-50 transition-colors duration-200">
-                                                    <td className="px-4 py-2">{row.leistung} {sportConfig.unit}</td>
-                                                    <td className="px-4 py-2 text-right font-medium">{row.punkte}</td>
+                                                    <td className="px-4 py-2">{row.performance} {sportConfig.unit}</td>
+                                                    <td className="px-4 py-2 text-right font-medium">{row.points}</td>
                                                 </tr>
                                             ))}
                                             </tbody>
@@ -624,9 +624,9 @@ export default function GroupResults() {
 
                         {/* Mobile Accordion View - Now Scrollable */}
                         <div className="block md:hidden space-y-4 text-gray-800">
-                            {pointsData.map(({ geschlecht, data }, index) => (
+                            {pointsData.map(({ gender, data }, index) => (
                                 <div
-                                    key={geschlecht}
+                                    key={gender}
                                     className="border border-gray-200 rounded-lg overflow-hidden shadow-sm transition-all"
                                 >
                                     <button
@@ -635,9 +635,9 @@ export default function GroupResults() {
                                     >
                     <span className="flex items-center gap-2">
                       <span className="text-blue-600">
-                        {geschlecht === "maennlich" ? "♂" : "♀"}
+                        {gender === "maennlich" ? "♂" : "♀"}
                       </span>
-                      <span>{geschlecht === "maennlich" ? "Männlich" : "Weiblich"}</span>
+                      <span>{gender === "maennlich" ? "Männlich" : "Weiblich"}</span>
                     </span>
                                         <svg
                                             className={`w-5 h-5 text-blue-600 transform transition-transform duration-300 ${
@@ -674,8 +674,8 @@ export default function GroupResults() {
                                                 <tbody className="bg-white">
                                                 {data.map((row, j) => (
                                                     <tr key={j} className="hover:bg-blue-50 transition-colors">
-                                                        <td className="px-4 py-2">{row.leistung} {sportConfig.unit}</td>
-                                                        <td className="px-4 py-2 text-right font-medium">{row.punkte}</td>
+                                                        <td className="px-4 py-2">{row.performance} {sportConfig.unit}</td>
+                                                        <td className="px-4 py-2 text-right font-medium">{row.points}</td>
                                                     </tr>
                                                 ))}
                                                 </tbody>

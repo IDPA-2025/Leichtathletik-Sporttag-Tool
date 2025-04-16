@@ -23,8 +23,9 @@ export async function POST(req) {
                 "Cookie": cookie // Auth weiterleiten
             }
         });
-
-        if (!rankingsRes.ok) throw new Error("Fehler beim Laden der Rankings");
+        if (!rankingsRes.ok) {
+            throw new Error("Fehler beim Laden der Rankings");
+        }
 
         // Rankings und Zusatzdaten extrahieren
         const json = await rankingsRes.json();
@@ -71,7 +72,7 @@ export async function POST(req) {
 
                 const type = parts[0];
                 const value = parts[1];
-                const geschlecht = parts[2];
+                const gender = parts[2];
 
                 // Ranking vorbereiten, Daten anreichern, sortieren und ränge vergeben
                 const list = rankings[key];
@@ -79,26 +80,26 @@ export async function POST(req) {
                 listen[key] = list
                     .map((s) => ({
                         ...s,
-                        vorname: s.vorname,
-                        nachname: s.nachname,
+                        name: s.name,
+                        surname: s.surname,
                         total_points: studentMap[s.id]?.total_points || 0,
                         grade: studentMap[s.id]?.grade,
                         resultDetails: resultsMap[s.id] || {},
-                        helfer: studentMap[s.id]?.helfer,
-                        anwesend: studentMap[s.id]?.anwesend
+                        assistant_bool: studentMap[s.id]?.assistant_bool,
+                        present_bool: studentMap[s.id]?.present_bool
                     }))
                     .sort((a, b) => {
                         // Sortierlogik: Anwesenheit → Helfer → Punkte
-                        if (!a.anwesend && b.anwesend) return 1;
-                        if (a.anwesend && !b.anwesend) return -1;
-                        if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
-                        if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
+                        if (!a.present_bool && b.present_bool) return 1;
+                        if (a.present_bool && !b.present_bool) return -1;
+                        if (a.assistant_bool && !b.assistant_bool && a.present_bool && b.present_bool) return 1;
+                        if (!a.assistant_bool && b.assistant_bool && a.present_bool && b.present_bool) return -1;
                         return b.total_points - a.total_points;
                     })
                     .map(student => {
-                        if (student.anwesend === true && student.helfer === false) {
+                        if (student.present_bool === true && student.assistant_bool === false) {
                             student.rang = rankCounter++;
-                        } else if (student.anwesend === false) {
+                        } else if (student.present_bool === false) {
                             student.rang = "Abwesend";
                         } else {
                             student.rang = "Helfer";
@@ -121,9 +122,9 @@ export async function POST(req) {
                 };
 
                 if (type === "category") {
-                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${formatAgeCategory(value)}`;
+                    titles[key] = `Rangliste für ${gender === "maennlich" ? "Männlich" : "Weiblich"} in der Alterskategorie ${formatAgeCategory(value)}`;
                 } else if (type === "class") {
-                    titles[key] = `Rangliste für ${geschlecht === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${value}`;
+                    titles[key] = `Rangliste für ${gender === "maennlich" ? "Männlich" : "Weiblich"} in der Klasse ${value}`;
                 }
             }
         }
@@ -145,13 +146,13 @@ export async function POST(req) {
             // Zusatzinfos anreichern
             allStudents = allStudents.map(s => ({
                 ...s,
-                vorname: s.vorname,
-                nachname: s.nachname,
+                name: s.name,
+                surname: s.surname,
                 total_points: studentMap[s.id]?.total_points || 0,
                 grade: studentMap[s.id]?.grade,
                 resultDetails: resultsMap[s.id] || {},
-                helfer: studentMap[s.id]?.helfer,
-                anwesend: studentMap[s.id]?.anwesend
+                assistant_bool: studentMap[s.id]?.assistant_bool,
+                present_bool: studentMap[s.id]?.present_bool
             }));
 
             // Filter anwenden
@@ -159,9 +160,9 @@ export async function POST(req) {
             console.log("All students count:", allStudents.length);
             console.log("Sample student data:", allStudents.length > 0 ? allStudents[0] : "No students");
 
-            if (filters.geschlecht !== "alle") {
-                console.log("Filtering by gender:", filters.geschlecht);
-                filteredStudents = filteredStudents.filter(s => s.geschlecht === filters.geschlecht);
+            if (filters.gender !== "alle") {
+                console.log("Filtering by gender:", filters.gender);
+                filteredStudents = filteredStudents.filter(s => s.gender === filters.gender);
                 console.log("After gender filter count:", filteredStudents.length);
             }
 
@@ -172,22 +173,22 @@ export async function POST(req) {
                 console.log("After age filter count:", filteredStudents.length);
             }
 
-            if (filters.klasse !== "alle") {
-                filteredStudents = filteredStudents.filter(s => s.klasse === filters.klasse);
+            if (filters.class_group !== "alle") {
+                filteredStudents = filteredStudents.filter(s => s.class_group === filters.class_group);
             }
 
             // Sortieren + Ränge
             let rankCounter = 1;
             filteredStudents = filteredStudents.sort((a, b) => {
-                if (!a.anwesend && b.anwesend) return 1;
-                if (a.anwesend && !b.anwesend) return -1;
-                if (a.helfer && !b.helfer && a.anwesend && b.anwesend) return 1;
-                if (!a.helfer && b.helfer && a.anwesend && b.anwesend) return -1;
+                if (!a.present_bool && b.present_bool) return 1;
+                if (a.present_bool && !b.present_bool) return -1;
+                if (a.assistant_bool && !b.assistant_bool && a.present_bool && b.present_bool) return 1;
+                if (!a.assistant_bool && b.assistant_bool && a.present_bool && b.present_bool) return -1;
                 return b.total_points - a.total_points;
             }).map(student => {
-                if (student.anwesend === true && student.helfer === false) {
+                if (student.present_bool === true && student.assistant_bool === false) {
                     student.rang = rankCounter++;
-                } else if (student.anwesend === false) {
+                } else if (student.present_bool === false) {
                     student.rang = "Abwesend";
                 } else {
                     student.rang = "Helfer";
@@ -200,16 +201,16 @@ export async function POST(req) {
             };
 
             // Dynamischen Titel generieren
-            const geschlechtText = filters.geschlecht === "alle" ? "Alle" :
-                (filters.geschlecht === "maennlich" ? "Männlich" : "Weiblich");
+            const genderText = filters.gender === "alle" ? "Alle" :
+                (filters.gender === "maennlich" ? "Männlich" : "Weiblich");
 
             const altersText = filters.altersgruppe === "alle" ? "alle Altersgruppen" :
                 (filters.altersgruppe === "-15" ? "bis 15 Jahre" :
                     (filters.altersgruppe === "16-17" ? "16 bis 17 Jahre" : "18+ Jahre"));
 
-            const klasseText = filters.klasse === "alle" ? "alle Klassen" : `Klasse ${filters.klasse}`;
+            const klasseText = filters.class_group === "alle" ? "alle Klassen" : `Klasse ${filters.class_group}`;
 
-            titles["Benutzerdefiniert"] = `Rangliste für ${geschlechtText} in ${altersText}, ${klasseText}`;
+            titles["Benutzerdefiniert"] = `Rangliste für ${genderText} in ${altersText}, ${klasseText}`;
         }
 
         // Alle Disziplinen aus resultDetails extrahieren

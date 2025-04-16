@@ -4,10 +4,10 @@ import {requireAnyRole} from "@/app/lib/auth";
 // Schüler einer Klasse löschen
 export async function DELETE(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
-    const { klasse } = await req.json();
+    const { class_group } = await req.json();
 
     // Klasse prüfen
-    if (!klasse) {
+    if (!class_group) {
         return new Response(JSON.stringify({ error: "Klasse fehlt" }), { status: 400 });
     }
 
@@ -15,7 +15,7 @@ export async function DELETE(req) {
     const { error } = await supabase
         .from("students")
         .delete()
-        .eq("klasse", klasse);
+        .eq("class_group", class_group);
 
     if (error) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });

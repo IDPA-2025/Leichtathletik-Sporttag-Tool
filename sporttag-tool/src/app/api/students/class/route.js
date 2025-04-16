@@ -6,11 +6,11 @@ export async function GET(req) {
     const user = requireAnyRole(req, ["teacher", "assistant"]);
 
     const { searchParams } = new URL(req.url);
-    const klasse = searchParams
-        .get("klasse");
+    const class_group = searchParams
+        .get("class_group");
 
     // Klasse prüfen
-    if (!klasse) {
+    if (!class_group) {
         return new Response(JSON.stringify({
             error: "Klasse fehlt"
         }), { status: 400 });
@@ -20,7 +20,7 @@ export async function GET(req) {
     const { data, error } = await supabase
         .from("students")
         .select("*")
-        .eq("klasse", klasse);
+        .eq("class_group", class_group);
 
     if (error) {
         return new Response(JSON.stringify({

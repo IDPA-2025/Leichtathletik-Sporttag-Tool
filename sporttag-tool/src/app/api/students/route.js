@@ -17,8 +17,8 @@ export async function GET(req) {
     // OR-Filter für Supabase generieren
     const orFilter = gruppen
         .map(g => {
-            const [klasse, geschlecht] = g.split("-");
-            return `and(klasse.eq.${klasse},geschlecht.eq.${geschlecht})`;
+            const [class_group, gender] = g.split("-");
+            return `and(class_group.eq.${class_group},gender.eq.${gender})`;
         })
         .join(",");
 

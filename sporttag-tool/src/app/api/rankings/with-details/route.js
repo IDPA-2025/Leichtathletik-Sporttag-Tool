@@ -8,7 +8,7 @@ export async function GET(req) {
         // Schülerdaten abrufen
         const { data: students, error: studentError } = await supabase
             .from("students")
-            .select("id, vorname, nachname, klasse, geburtsdatum, geschlecht, age_category, grade, anwesend, total_points, helfer")
+            .select("id, name, surname, class_group, date_of_birth, gender, age_category, grade, present_bool, total_points, assistant_bool")
 
         if (studentError) {
             throw new Error("Fehler beim Laden der Schüler: " + studentError.message);
@@ -40,26 +40,26 @@ export async function GET(req) {
         }
 
         // Punkte in DB zurückschreiben (optional, falls noch nicht gespeichert)
-        for (const [studentId, punkte] of punkteMap.entries()) {
+        for (const [studentId, points] of punkteMap.entries()) {
             await supabase
                 .from("students")
-                .update({ total_points: punkte })
+                .update({ total_points: points })
                 .eq("id", studentId);
         }
 
         // Daten in ein einheitliches Format bringen
         const daten = students.map((s) => ({
             id: s.id,
-            vorname: s.vorname,
-            nachname: s.nachname,
-            klasse: s.klasse,
-            geschlecht: s.geschlecht,
+            name: s.name,
+            surname: s.surname,
+            class_group: s.class_group,
+            gender: s.gender,
             alter: s.alter,
             kategorie: s.age_category,
             total_points: s.total_points || 0,
             grade: s.grade,
-            helfer: s.helfer,
-            anwesend: s.anwesend
+            assistant_bool: s.assistant_bool,
+            present_bool: s.present_bool
         }));
 
         // Rankings nach Alterskategorie & Klasse gruppieren
@@ -67,14 +67,14 @@ export async function GET(req) {
 
         for (const eintrag of daten) {
             // Preset1 → Gruppierung nach Alterskategorie + Geschlecht
-            const keyCategory = `category__${eintrag.kategorie}__${eintrag.geschlecht}`;
+            const keyCategory = `category__${eintrag.kategorie}__${eintrag.gender}`;
             if (!gruppierteRanglisten[keyCategory]) {
                 gruppierteRanglisten[keyCategory] = [];
             }
             gruppierteRanglisten[keyCategory].push(eintrag);
 
             // Preset2 → Gruppierung nach Klasse + Geschlecht
-            const keyClass = `class__${eintrag.klasse}__${eintrag.geschlecht}`;
+            const keyClass = `class__${eintrag.class_group}__${eintrag.gender}`;
             if (!gruppierteRanglisten[keyClass]) {
                 gruppierteRanglisten[keyClass] = [];
             }

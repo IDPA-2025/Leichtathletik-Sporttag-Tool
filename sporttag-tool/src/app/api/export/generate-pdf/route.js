@@ -17,7 +17,7 @@ export async function POST(req) {
 
         // Einzelne Disziplin-Zelle formatieren
         const formatDisziplinZelle = (s, sport, sportUnitMap) => {
-            if (s.helfer) return "-";
+            if (s.assistant_bool) return "-";
             const detail = s.resultDetails?.[sport];
             if (detail?.skipped) return "Übersprungen";
 
@@ -41,12 +41,12 @@ export async function POST(req) {
 
         // Komplette Zeile für einen Schüler erzeugen
         const generateExportRow = (s, i, sportHeaders, sportUnitMap) => {
-            const rankDisplay = s.rang || (s.helfer ? "Helfer" : (i + 1));
+            const rankDisplay = s.rang || (s.assistant_bool ? "Helfer" : (i + 1));
             return [
                 rankDisplay,
-                s.vorname,
-                s.nachname,
-                s.klasse,
+                s.name,
+                s.surname,
+                s.class_group,
                 s.total_points,
                 ...(showGrades ? [s.grade ?? "-"] : []),
                 ...(showDetails ? generateDisziplinZellen(s, sportHeaders, sportUnitMap) : [])
@@ -93,7 +93,7 @@ export async function POST(req) {
                         data.cell.styles.fontStyle = 'normal';
 
                         // Abwesend grau markieren
-                        if (student.helfer !== true) {
+                        if (student.assistant_bool !== true) {
                             if (data.row.index === 0) data.cell.styles.fillColor = [255, 223, 100];
                             else if (data.row.index === 1) data.cell.styles.fillColor = [220, 220, 220];
                             else if (data.row.index === 2) data.cell.styles.fillColor = [205, 127, 50];

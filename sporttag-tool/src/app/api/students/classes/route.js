@@ -7,9 +7,9 @@ export async function GET(req) {
 
     const { data, error } = await supabase
         .from("students")
-        .select("klasse")
-        .not("klasse", "is", null)
-        .order("klasse", { ascending: true });
+        .select("class_group")
+        .not("class_group", "is", null)
+        .order("class_group", { ascending: true });
 
     if (error) {
         return new Response(JSON.stringify({
@@ -19,7 +19,7 @@ export async function GET(req) {
 
     // Duplikate entfernen
     const uniqueClasses = [...new Set(data
-        .map((student) => student.klasse)
+        .map((student) => student.class_group)
     )];
     // Klassenliste zurückgeben
     return new Response(JSON.stringify({
